@@ -3,4 +3,5 @@ project(zadanie1 C)
 
 set(CMAKE_C_STANDARD 99)
 
+add_library()
 add_executable(zadanie1 main.c)

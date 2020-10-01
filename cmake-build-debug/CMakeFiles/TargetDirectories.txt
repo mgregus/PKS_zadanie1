@@ -1,3 +1,0 @@
-D:/piaty semester/PKS/zadanie1/cmake-build-debug/CMakeFiles/zadanie1.dir
-D:/piaty semester/PKS/zadanie1/cmake-build-debug/CMakeFiles/edit_cache.dir
-D:/piaty semester/PKS/zadanie1/cmake-build-debug/CMakeFiles/rebuild_cache.dir
