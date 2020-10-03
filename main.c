@@ -1,16 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <pcap.h>
 #include <string.h>
 
 
 /* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
-typedef struct Ethernetframe{
-	char Smacad[6];
-	char Dmacad[6];
-	char type[4];
-}Ethernet;
 
 int dlzka_paketu_po_mediu(int apilength){
 	int medialength = 0;
@@ -24,6 +20,23 @@ int dlzka_paketu_po_mediu(int apilength){
 	return medialength;
 }
 
+u_char *copyuchar(u_char *source, int n){
+	int i;
+	u_char *dest;
+	dest = malloc(n*sizeof(u_char));
+	for(i = 0; i < n; i++){
+		printf("%.2x ",source[i]);
+		dest[i] = source[i];
+	}	
+
+	return dest;
+}
+
+u_short hex_to_dec(u_char *x){
+	u_short decimal = *(u_short*)x;
+	return decimal = (decimal >> 8) | ((decimal & 255) << 8);;	
+}
+
 int main(int argc, char *argv[]) {
 	
 	//error sizedefined in the lib
@@ -32,6 +45,8 @@ int main(int argc, char *argv[]) {
 	//nacitanie nazvu .pcap suboru
 	char filepath[200] = "pcap/";
 	char *filename;
+	u_char *L2protokol;
+	L2protokol = malloc(2*sizeof(u_char));
 	filename = malloc(200);
 	printf("zadajde nazov .pcap suboru\n");
 	scanf("%s",filename);
@@ -66,12 +81,44 @@ int main(int argc, char *argv[]) {
 	if(modvypisu == 1){
 	
 		int porcisloramca = 0;
-		while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1){
+		while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1/* && porcisloramca < 5*/){
 			porcisloramca++;
 			fprintf(output,"ramec: %d\n",porcisloramca);
 			fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
 			fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
-		
+			
+			//printf("decimal: %d\n",hex_to_dec("8c6F",4));
+			
+			//zistenie typu L2 ramca
+			int pom = 0;
+			int i;
+			for(i = 12; i < 14; i++)
+				L2protokol[pom++] = data_packetu[i]; 
+			
+			//Ramec L2 vrstvy je Ethernet
+			if(hex_to_dec(L2protokol) > 1500){
+				fprintf(output,"Ethernet II\n");
+			}			
+			//Ramec L2 vrstvy je IEEE 802.3
+			else{
+				fprintf(output,"IEEE 802.3\n");
+			}
+			
+			//zistenie MAC adries
+			fprintf(output,"Cielová MAC adresa: ");
+			for(i = 0 ; i < 6; i++){
+				fprintf(output,"%.2x ",data_packetu[i]);
+			}
+			fprintf(output,"\n");
+			fprintf(output,"Zdrojová MAC adresa: ");
+			for(i = 6 ; i < 12; i++){
+				fprintf(output,"%.2x ",data_packetu[i]);
+			}
+			fprintf(output,"\n");
+			
+			
+				
+				
 			//vypis ramca
 			int it = 0;
 			while(it < hlavicka_packetu->len){
