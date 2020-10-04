@@ -40,7 +40,9 @@ typedef struct IEEEsnap{
 	u_char type[2];
 }IEEEsnap;
 
-
+typedef struct IPv4{
+	
+}IPv4;
 
 int dlzka_paketu_po_mediu(int apilength){
 	int medialength = 0;
@@ -66,12 +68,8 @@ u_char *copyuchar(u_char *source, int n){
 	return dest;
 }
 
-u_short hex_to_dec(u_char *x){
-	u_short decimal = *(u_short*)x;
-	return decimal = (decimal >> 8) | ((decimal & 255) << 8);;	
-}
 
-//postupnost bajtov zmeni na desiatkove cislo, funguje len na 4B
+//postupnost bajtov zmeni na desiatkove cislo, funguje len do 4B
 int hodnota(u_char *pole, int n){
 	int i,j,iter;
 	iter = 0;
@@ -82,7 +80,6 @@ int hodnota(u_char *pole, int n){
 		i += (int)pole[iter];
 	}
 	
-
 	return i;
 }
 
@@ -99,11 +96,55 @@ void vypisMacadries(Ethernet *pt, FILE *output){
 			fprintf(output,"Zdrojová MAC adresa: ");
 			for(i = 0; i < 6; i++)
 			fprintf(output,"%.2x ",pt->Smac[i]);
-			fprintf(output,"\n");
-		
-			
+			fprintf(output,"\n");			
 			
 }
+
+
+//interpretuje nazov protokolu/portu z externeho suboru
+char *nazov(int vstup, FILE *subor){
+	rewind(subor);
+	char *name;
+	char *pom;
+	name = malloc(200*sizeof(char));
+	pom = malloc(200*sizeof(char));
+	int count = 0; 
+	
+	char c;
+	char found = 0;
+	int hodnotasth;
+    
+	while((c=getc(subor))!= EOF){
+        if(isdigit(c)){
+        	ungetc(c,subor);
+        	getc(subor);
+        	fscanf(subor,"%x",&hodnotasth);
+        	
+        	if(hodnotasth == vstup){
+        		fscanf(subor,"%s",name);
+        		
+        		//check pre porty aj nazov
+				if(isdigit(name[0])){
+        			
+					fscanf(subor,"%s",pom);
+        			
+					while(pom[count++] != 0);
+        			strncat(name," \0",1);
+        			strncat(name, pom,count);
+        			free(pom);
+				}
+				
+        		found = 1; 
+        		break;
+			}
+		}
+    }
+	
+	if(found == 1)
+		return name;
+	return "dany zaznam nie je v externom subore\0";
+}
+
 
 int main(int argc, char *argv[]) {
 	
@@ -131,6 +172,10 @@ int main(int argc, char *argv[]) {
 	output = fopen("output.txt","w");
 	FILE *protokoly;
 	protokoly = fopen("protokoly.txt","r");
+	if(protokoly == NULL){
+		printf("neda sa otvorit externy subor\n");
+		return 2;
+	}
 	//***********************************************************************************
 	
 	//vyber modu vypisu
@@ -147,6 +192,8 @@ int main(int argc, char *argv[]) {
 	//pomocne premmenne
 	u_char *pom;
 	int decimalvalue;
+	char *nazovsth;
+	int type;
 	//***********************************************************************************
 	
 	
@@ -168,7 +215,7 @@ int main(int argc, char *argv[]) {
 	
 		int porcisloramca = 0;
 		while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& porcisloramca < 5*/){
-			
+			type = 0;
 			porcisloramca++;
 			
 			fprintf(output,"ramec: %d\n",porcisloramca);
@@ -188,14 +235,66 @@ int main(int argc, char *argv[]) {
 			
 			decimalvalue = hodnota(pom, 2);
 				//printf("%d\n",decimalvalue);
+				
 			if(decimalvalue > 1500){
-				fprintf(output,"Ethernet\n");
+				fprintf(output,"Ethernet II\n");
+				type = decimalvalue;
 			}
 			else{
-				fprintf(output,"IEEE 802.3\n");
+				
+				fprintf(output,"IEEE 802.3 ");
+				pom = copyuchar(ieee->ipx,1);	
+				decimalvalue = hodnota(pom, 1);	
+				
+				//raw/lcc/llc+snap if splnene tak je to raw
+				if(decimalvalue == 255){
+					
+					fprintf(output,"- Raw\n");
+					vypisMacadries(ethernet,output);
+					nazovsth = nazov(decimalvalue,protokoly);
+					fprintf(output,"%s\n",nazovsth);
+				
+				}//llc/llc+snap
+				else{
+					
+					pom = copyuchar(ieeellc->ssap,1);
+					decimalvalue = hodnota(pom, 1);	
+					
+					
+					//ma llc aj sna
+					if(decimalvalue == 170){
+						fprintf(output," s LLC a SNAP\n");
+						pom = copyuchar(ieeesnap->type,2);	
+						decimalvalue = hodnota(pom, 2);
+						vypisMacadries(ethernet,output);	
+						nazovsth = nazov(decimalvalue,protokoly);
+						fprintf(output,"%s\n",nazovsth);
+					}//ma llc
+					else{
+						fprintf(output," s LLC\n");
+						vypisMacadries(ethernet,output);	
+						pom = copyuchar(ieeellc->ssap,1);
+						decimalvalue = hodnota(pom, 1);	
+						nazovsth = nazov(decimalvalue,protokoly);
+						fprintf(output,"%s\n",nazovsth);
+					}					
+				}
+			
+			
 			}
 			
-			vypisMacadries(ethernet,output);	
+			s
+			
+			
+			
+			//vypis vnoreneho protokolu pre ethernet
+			if(type > 0){
+				vypisMacadries(ethernet,output);	
+				nazovsth = nazov(type,protokoly);
+				fprintf(output,"%s\n",nazovsth);
+			}
+			
+			
 				
 			//vypis ramca
 			int it = 0;
@@ -210,6 +309,9 @@ int main(int argc, char *argv[]) {
 		}
 	
 	}
+	
+	//***********************************************************************************
+	
 	
 	fclose(output);
 	pcap_close(pcap_subor);
