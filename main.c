@@ -13,42 +13,11 @@ typedef struct Ethernet{
 	u_char type[2];
 }Ethernet;
 
-typedef struct IEEEraw{
-	u_char Dmac[6];
-	u_char Smac[6];
-	u_char len[2];
-	u_char ipx[3];
-}IEEEraw;
 
-typedef struct IEEEllc{
-	u_char Dmac[6];
-	u_char Smac[6];
-	u_char len[2];
-	u_char dsap[1];
-	u_char ssap[1];
-	u_char cont[1];
-}IEEEllc;
-
-typedef struct IEEEsnap{
-	u_char Dmac[6];
-	u_char Smac[6];
-	u_char len[2];
-	u_char dsap[1];
-	u_char ssap[1];
-	u_char cont[1];
-	u_char vc[3];
-	u_char type[2];
-}IEEEsnap;
 
 typedef struct IPv4{
 	u_char ihlv[1];
-	u_char tos[1];
-	u_char length[2];
-	u_char nic[2];
-	u_char fragoff[2];
-	u_char ttl[1];
 	u_char protocol[1];
-	u_char checksum[2];
 	u_char sourceip[4];
 	u_char destip[4];
 }IPv4;
@@ -63,12 +32,18 @@ typedef struct IPv6{
 }IPv6;
 
 typedef struct ARP{
-	u_char nic[6];
-	u_char reqrep[2];
-	u_char srcmac[6];
-	u_char srcip[4];
-	u_char tmac[6];
-	u_char tip[4];
+	//request /reply
+	u_char operation[2];
+	
+	//request unicast mac of sender
+	//reply unicast mac of reciever which was unknown
+	u_char sendermac[6];
+	u_char senderip[4];
+	
+	//request broadcast ff:ff
+	//reply unicast address
+	u_char targetmac[6];
+	u_char targetip[4];
 }ARP;
 
 typedef struct UZLY{
@@ -144,7 +119,7 @@ void vypisMacadries(Ethernet *pt, FILE *output){
 			fprintf(output,"\n");			
 }
 
-void vypisIpadries(IPv4 *pt, FILE *output){
+void vypisIpadriesIP(IPv4 *pt, FILE *output){
 			int i;			
 			fprintf(output,"Zdrojová Ip adresa: ");
 			for(i = 0; i < 4; i++){
@@ -165,6 +140,29 @@ void vypisIpadries(IPv4 *pt, FILE *output){
 			fprintf(output,"\n");			
 			
 }
+
+void vypisIpadriesARP(ARP *pt, FILE *output){
+			int i;			
+			fprintf(output,"Sender Ip adresa: ");
+			for(i = 0; i < 4; i++){
+				if(i == 3)
+					fprintf(output,"%d",pt->senderip[i]);
+				else 	
+					fprintf(output,"%d.",pt->senderip[i]);
+				}
+			fprintf(output,"\n");
+			
+			fprintf(output,"Target Ip adresa: ");
+			for(i = 0; i < 4; i++){
+				if(i == 3)
+					fprintf(output,"%d",pt->targetip[i]);
+				else 	
+					fprintf(output,"%d.",pt->targetip[i]);
+				}
+			fprintf(output,"\n");			
+			
+}
+
 
 void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 		
@@ -277,9 +275,6 @@ int main(int argc, char *argv[]) {
 	
 	//l2 struktury
 	Ethernet *ethernet = malloc(sizeof(Ethernet));
-	IEEEraw *ieee = malloc(sizeof(IEEEraw));
-	IEEEllc *ieeellc = malloc(sizeof(IEEEllc));
-	IEEEsnap *ieeesnap = malloc(sizeof(IEEEsnap));
 	//***********************************************************************************
 	
 	//l3struktury
@@ -350,14 +345,13 @@ int main(int argc, char *argv[]) {
 					
 					
 					//zistenie typu L2 ramca
-					ethernet = (Ethernet*)(data_packetu);
-					ieee = (IEEEraw*)(data_packetu);
-					ieeellc = (IEEEllc*)(data_packetu);
-					ieeesnap = ((IEEEsnap*)data_packetu);
+					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
+					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
 					
 					
 					//zistenie obsahu na mieste ethertype 12-14B
-					pom = copyuchar((u_char*)data_packetu+12, 2);
+					pom = copyuchar(ethernet->type, 2);
 					decimalvalue = hodnota(pom, 2);
 					free(pom);
 					
@@ -369,7 +363,7 @@ int main(int argc, char *argv[]) {
 					else{
 						
 						fprintf(output,"IEEE 802.3 ");
-						pom = copyuchar(ieee->ipx,1);	
+						pom = copyuchar((u_char*)data_packetu+15,1);	
 						decimalvalue = hodnota(pom, 1);	
 						free(pom);
 						
@@ -384,25 +378,27 @@ int main(int argc, char *argv[]) {
 						}//llc/llc+snap
 						else{
 							
-							pom = copyuchar(ieeellc->ssap,1);
+							pom = copyuchar((u_char*)data_packetu+15,1);
 							decimalvalue = hodnota(pom, 1);	
 							free(pom);
 							
 							
-							//ma llc aj sna
+							//ma llc aj snap
 							if(decimalvalue == 170){
 								fprintf(output," s LLC a SNAP\n");
-								pom = copyuchar(ieeesnap->type,2);	
+								nazovsth = nazov(decimalvalue,protokoly);
+								fprintf(output,"SSAP: %s\n",nazovsth);
+								pom = copyuchar((u_char*)data_packetu+20,2);	
 								decimalvalue = hodnota(pom, 2);
 								free(pom);
 								vypisMacadries(ethernet,output);	
 								nazovsth = nazov(decimalvalue,protokoly);
-								fprintf(output,"%s\n",nazovsth);
+								fprintf(output,"Ether type: %s\n",nazovsth);
 							}//ma llc
 							else{
 								fprintf(output," s LLC\n");
 								vypisMacadries(ethernet,output);	
-								pom = copyuchar(ieeellc->ssap,1);
+								pom = copyuchar((u_char*)data_packetu+15,1);
 								decimalvalue = hodnota(pom, 1);	
 								free(pom);
 								nazovsth = nazov(decimalvalue,protokoly);
@@ -422,12 +418,6 @@ int main(int argc, char *argv[]) {
 						vypisMacadries(ethernet,output);	
 						nazovsth = nazov(type,protokoly);
 						fprintf(output,"%s\n",nazovsth);
-						/*
-						spytat sa na toto na cviceni????
-						if(type == 800){
-						IPv4 = (ipv4*)(data_packetu+sizeof(ethernet));
-						}
-						*/
 					}
 					
 					
@@ -454,8 +444,7 @@ int main(int argc, char *argv[]) {
 			
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& porcisloramca < 5*/){
-					type = 0;
-					aktualizovane = 0;
+				type = 0;
 					porcisloramca++;
 					
 					fprintf(output,"ramec: %d\n",porcisloramca);
@@ -464,16 +453,16 @@ int main(int argc, char *argv[]) {
 					
 					
 					//zistenie typu L2 ramca
-					ethernet = (Ethernet*)(data_packetu);
-					ieee = (IEEEraw*)(data_packetu);
-					ieeellc = (IEEEllc*)(data_packetu);
-					ieeesnap = ((IEEEsnap*)data_packetu);
+					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
+					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
 					
 					
 					//zistenie obsahu na mieste ethertype 12-14B
-					pom = copyuchar((u_char*)data_packetu+12, 2);
+					pom = copyuchar(ethernet->type, 2);
 					decimalvalue = hodnota(pom, 2);
 					free(pom);
+					
 						
 					if(decimalvalue > 1500){
 						fprintf(output,"Ethernet II\n");
@@ -482,7 +471,7 @@ int main(int argc, char *argv[]) {
 					else{
 						
 						fprintf(output,"IEEE 802.3 ");
-						pom = copyuchar(ieee->ipx,1);	
+						pom = copyuchar((u_char*)data_packetu+15,1);	
 						decimalvalue = hodnota(pom, 1);	
 						free(pom);
 						
@@ -497,24 +486,27 @@ int main(int argc, char *argv[]) {
 						}//llc/llc+snap
 						else{
 							
-							pom = copyuchar(ieeellc->ssap,1);
+							pom = copyuchar((u_char*)data_packetu+15,1);
 							decimalvalue = hodnota(pom, 1);	
 							free(pom);
 							
-							//ma llc aj sna
+							
+							//ma llc aj snap
 							if(decimalvalue == 170){
 								fprintf(output," s LLC a SNAP\n");
-								pom = copyuchar(ieeesnap->type,2);	
+								nazovsth = nazov(decimalvalue,protokoly);
+								fprintf(output,"SSAP: %s\n",nazovsth);
+								pom = copyuchar((u_char*)data_packetu+20,2);	
 								decimalvalue = hodnota(pom, 2);
 								free(pom);
 								vypisMacadries(ethernet,output);	
 								nazovsth = nazov(decimalvalue,protokoly);
-								fprintf(output,"%s\n",nazovsth);
+								fprintf(output,"Ether type: %s\n",nazovsth);
 							}//ma llc
 							else{
 								fprintf(output," s LLC\n");
 								vypisMacadries(ethernet,output);	
-								pom = copyuchar(ieeellc->ssap,1);
+								pom = copyuchar((u_char*)data_packetu+15,1);
 								decimalvalue = hodnota(pom, 1);	
 								free(pom);
 								nazovsth = nazov(decimalvalue,protokoly);
@@ -540,8 +532,14 @@ int main(int argc, char *argv[]) {
 						if(type == 2048){
 							
 							//aj tu prerobit
-							stvorka = (IPv4*)(data_packetu+sizeof(Ethernet));
-							vypisIpadries(stvorka, output);
+							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);
+							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
+							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
+							vypisIpadriesIP(stvorka, output);
+							decimalvalue = hodnota(stvorka->protocol,1);
+							nazovsth = nazov(decimalvalue,protokoly);
+							fprintf(output,"%s\n",nazovsth);
 							
 							//pridanie na zaciatok sp zoznamu
 							if(uzly == NULL){
@@ -590,7 +588,29 @@ int main(int argc, char *argv[]) {
 							
 						}
 						
-					}
+						if(type == 2054){
+							
+							//aj tu prerobit
+							cpchar((u_char*)data_packetu+20,arp->operation,2);
+							cpchar((u_char*)data_packetu+22,arp->sendermac,6);
+							cpchar((u_char*)data_packetu+28,arp->senderip,4);
+							cpchar((u_char*)data_packetu+32,arp->targetmac,6);
+							cpchar((u_char*)data_packetu+38,arp->targetip,4);
+							decimalvalue = hodnota(arp->operation,2);
+							
+							if(decimalvalue == 1)
+								fprintf(output,"request\n");	
+							else 
+								fprintf(output,"reply\n");
+								
+							vypisIpadriesARP(arp, output);											
+								
+						}
+							
+						}
+						
+					
+					
 					
 					
 						
@@ -605,8 +625,8 @@ int main(int argc, char *argv[]) {
 					}
 					fprintf(output,"\n\n");
 				}
-				
-				//vypis adries uzlov
+					
+						//vypis adries uzlov
 				fprintf(output,"Zoznam IPv4 adries vsetkych prijimajucich uzlov: \n");
 				//prebehnutie celeho zoznamu
 				uzlypomocny = uzly;
@@ -657,18 +677,21 @@ int main(int argc, char *argv[]) {
 				
 				//uvolnenie celeho zoznamu
 			
+			}
+				
+			
 					
 			
 		//***********************************************************************************
 		//***********************************************************************************
 			
 		
-			
+			fclose(output);
+			pcap_close(pcap_subor);	
 		}
 	
-		fclose(output);
-		pcap_close(pcap_subor);
-	}
+	
+	
 	//***********************************************************************************
 	
 	
