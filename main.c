@@ -72,7 +72,7 @@ typedef struct ARP{
 }ARP;
 
 typedef struct UZLY{
-	u_char adresa[4];
+	u_char *adresa;
 	int prijatych;
 	struct UZLY *next;
 }UZLY;
@@ -101,6 +101,17 @@ u_char *copyuchar(u_char *source, int n){
 	return dest;
 }
 
+void cpchar(u_char *source,u_char *dest, int n){
+	int i;
+	
+	for(i = 0; i < n; i++){
+		dest[i] = source[i];
+	}	
+
+	/*printf("stvorka: %d.%d.%d.%d\n",source[0],source[1],source[2],source[3]);
+	printf("zoznam: %d.%d.%d.%d\n",dest[0],dest[1],dest[2],dest[3]);*/
+}
+
 
 //postupnost bajtov zmeni na desiatkove cislo, funguje len do 4B
 int hodnota(u_char *pole, int n){
@@ -112,6 +123,7 @@ int hodnota(u_char *pole, int n){
 		i = i << 8;
 		i += (int)pole[iter];
 	}
+	
 	
 	return i;
 }
@@ -259,6 +271,7 @@ int main(int argc, char *argv[]) {
 	int maxprijatych;
 	int porcisloramca = 0;
 	char aktualizovane;
+	char rovnake;
 	//***********************************************************************************
 	
 	
@@ -440,10 +453,6 @@ int main(int argc, char *argv[]) {
 		else if(modvypisu == 3){
 			
 				porcisloramca = 0;
-				maxprijatych = 0;
-				uzlypomocny = NULL;
-				uzly = NULL;
-				uzlymax = NULL;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& porcisloramca < 5*/){
 					type = 0;
 					aktualizovane = 0;
@@ -529,7 +538,8 @@ int main(int argc, char *argv[]) {
 						//spytat sa na toto????
 						
 						if(type == 2048){
-						
+							
+							//aj tu prerobit
 							stvorka = (IPv4*)(data_packetu+sizeof(Ethernet));
 							vypisIpadries(stvorka, output);
 							
@@ -537,20 +547,32 @@ int main(int argc, char *argv[]) {
 							if(uzly == NULL){
 								uzly = malloc(sizeof(UZLY));
 								uzly->prijatych = 1;
-								strcpy((char*)uzly->adresa,(char*)stvorka->destip);
+								uzly->adresa = malloc(4*sizeof(u_char));
+								cpchar(stvorka->destip,uzly->adresa,4);
 								uzly->next = NULL;
 							}
 							//pridanie do sp zoznamu alebo aktualizacia zaznamu
 							else if(uzly != NULL){
-								
 								uzlypomocny = uzly;
 								uzlymax = NULL;
+								aktualizovane = 0;
 								
-								while(uzlypomocny != NULL){
-									if(strcmp((char*)uzlypomocny->adresa,(char*)stvorka->destip) == 0){
+								while(uzlypomocny != NULL && aktualizovane != 1){
+									rovnake = 1;
+									
+									int i;
+									for(i = 0; i < 4; i++){
+										if(uzlypomocny->adresa[i] != stvorka->destip[i]){
+											rovnake = 0;
+										}
+											
+									}
+										
+									if(rovnake == 1){
 										uzlypomocny->prijatych += 1;
 										aktualizovane = 1;
 									}
+									
 									uzlymax = uzlypomocny;
 									uzlypomocny = uzlypomocny->next;										
 								}
@@ -558,8 +580,9 @@ int main(int argc, char *argv[]) {
 								if(aktualizovane == 0){
 									uzlymax->next = malloc(sizeof(UZLY));
 									uzlymax = uzlymax->next;
+									uzlymax->adresa = malloc(4*sizeof(u_char));
 									uzlymax->prijatych = 1;
-									strcpy((char*)uzlymax->adresa,(char*)stvorka->destip);
+									cpchar(stvorka->destip,uzlymax->adresa,4);
 									uzlymax->next = NULL;
 								}								
 								
@@ -589,7 +612,16 @@ int main(int argc, char *argv[]) {
 				uzlypomocny = uzly;
 				
 				while(uzlypomocny != NULL){
-					vypisIpadriesuzlov(uzlypomocny,output);
+					int i;
+					
+					for(i = 0; i < 4; i++){
+						if(i == 3)
+							fprintf(output,"%d",uzlypomocny->adresa[i]);
+						else 	
+							fprintf(output,"%d.",uzlypomocny->adresa[i]);
+					
+					}
+					fprintf(output,"\n");
 					uzlypomocny = uzlypomocny->next;				
 				}
 				
@@ -598,11 +630,13 @@ int main(int argc, char *argv[]) {
 				
 				uzlypomocny = uzly;
 				uzlymax = uzly;
+				maxprijatych = uzlypomocny->prijatych;
 				
 				while(uzlypomocny != NULL){
 					
-					if(uzlypomocny->prijatych > uzlymax->prijatych){
-					
+					if(uzlypomocny->prijatych > maxprijatych){
+						
+						maxprijatych = uzlypomocny->prijatych;
 						uzlymax = uzlypomocny;
 					
 					}
