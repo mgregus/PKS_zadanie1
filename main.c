@@ -23,10 +23,7 @@ typedef struct IPv4{
 }IPv4;
 
 typedef struct IPv6{
-	u_char vtraffic[4];
-	u_char payload[2];
 	u_char protocol[1];
-	u_char ttl[1];
 	u_char sourceip[16];
 	u_char destip[16];
 }IPv6;
@@ -155,6 +152,38 @@ void vypisIpadriesIP(IPv4 *pt, FILE *output){
 				else 	
 					fprintf(output,"%d.",pt->destip[i]);
 				}
+			fprintf(output,"\n");			
+			
+}
+
+void vypisIpadriesIPv6(IPv6 *pt, FILE *output){
+			int i;			
+			fprintf(output,"Zdrojová Ipv6 adresa: ");
+			for(i = 0; i < 16; i++){
+				if(i != 0 && i%2 == 0){
+					fprintf(output,":");
+				}
+				if(pt->sourceip[i] == 0)
+					fprintf(output,"%x0",pt->sourceip[i]);
+				else if(pt->sourceip[i] <= 15)
+					fprintf(output,"0%x",pt->sourceip[i]);
+				else
+					fprintf(output,"%x",pt->sourceip[i]);
+			}
+			fprintf(output,"\n");
+			
+			fprintf(output,"Cielová Ipv6 adresa: ");
+			for(i = 0; i < 16; i++){
+				if(i != 0 && i%2 == 0){
+					fprintf(output,":");
+				}
+				if(pt->destip[i] == 0)
+					fprintf(output,"%x0",pt->destip[i]);
+				else if(pt->destip[i] <= 15)
+					fprintf(output,"0%x",pt->destip[i]);
+				else
+					fprintf(output,"%x",pt->destip[i]);
+			}
 			fprintf(output,"\n");			
 			
 }
@@ -613,16 +642,13 @@ int main(int argc, char *argv[]) {
 						
 						//ipv6
 						if(type == 34525){
-							/*cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
-							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);
-							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
-							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
-							vypisIpadriesIP(stvorka, output);
-							decimalvalue = hodnota(stvorka->protocol,1);
+							cpchar((u_char*)data_packetu+20,sestka->protocol,1);
+							cpchar((u_char*)data_packetu+22,sestka->sourceip,16);
+							cpchar((u_char*)data_packetu+38,sestka->destip,16);
+							vypisIpadriesIPv6(sestka, output);
+							decimalvalue = hodnota(sestka->protocol,1);
 							nazovsth = nazov(decimalvalue,protokoly);
-							fprintf(output,"%s\n",nazovsth);
-							sestka*/
-							
+							fprintf(output,"%s\n",nazovsth);							
 						}						
 						
 						//arp

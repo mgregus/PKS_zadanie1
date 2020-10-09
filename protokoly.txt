@@ -11,6 +11,8 @@
 00001 1 ICMP
 00006 6 TCP
 00011 17 UDP
+#ipv6
+0003a ICMPv6
 #TCP ports
 00007 echo
 00014 ftp-data
