@@ -46,6 +46,24 @@ typedef struct ARP{
 	u_char targetip[4];
 }ARP;
 
+
+typedef struct TCP{
+	u_char sourceport[2];
+	u_char destport[2];
+	
+}TCP;
+
+typedef struct ICMP{
+	u_char type[1];
+	u_char code[1];
+}ICMP;
+
+typedef struct UDP{
+	u_char sourceport[2];
+	u_char destport[2];
+}UDP;
+
+
 typedef struct UZLY{
 	u_char *adresa;
 	int prijatych;
@@ -287,7 +305,12 @@ int main(int argc, char *argv[]) {
 	
 	//***********************************************************************************
 	
+	//L4 struktury
+	UDP *udp = malloc(sizeof(UDP));
+	TCP *tcp = malloc(sizeof(TCP));
+	ICMP *icmp = malloc(sizeof(ICMP));
 	
+	//***********************************************************************************
 	
 	//loop to keep analyzing new files
 	while(modvypisu != -1){
@@ -443,7 +466,7 @@ int main(int argc, char *argv[]) {
 		else if(modvypisu == 3){
 			
 				porcisloramca = 0;
-				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& porcisloramca < 5*/){
+				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
 				type = 0;
 					porcisloramca++;
 					
@@ -523,15 +546,15 @@ int main(int argc, char *argv[]) {
 					
 					//vypis vnoreneho protokolu pre ethernet
 					if(type > 0){
-						vypisMacadries(ethernet,output);	
+						vypisMacadries(ethernet,output);
 						nazovsth = nazov(type,protokoly);
 						fprintf(output,"%s\n",nazovsth);
-						
 						//spytat sa na toto????
 						
+						//ipv4
 						if(type == 2048){
 							
-							//aj tu prerobit
+							//aj tu prerobene
 							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
 							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);
 							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
@@ -588,6 +611,21 @@ int main(int argc, char *argv[]) {
 							
 						}
 						
+						//ipv6
+						if(type == 34525){
+							/*cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);
+							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
+							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
+							vypisIpadriesIP(stvorka, output);
+							decimalvalue = hodnota(stvorka->protocol,1);
+							nazovsth = nazov(decimalvalue,protokoly);
+							fprintf(output,"%s\n",nazovsth);
+							sestka*/
+							
+						}						
+						
+						//arp
 						if(type == 2054){
 							
 							//aj tu prerobit
@@ -606,8 +644,12 @@ int main(int argc, char *argv[]) {
 							vypisIpadriesARP(arp, output);											
 								
 						}
+						
+			
+						
+						
 							
-						}
+					}
 						
 					
 					

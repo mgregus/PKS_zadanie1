@@ -1,27 +1,35 @@
 #Ethertypes
-0x0800 IPv4
-0x0806 ARP
-0x08dd IPv6
+00800 IPv4
+00806 ARP
+086DD IPv6
 #LSAPs
-0x0042 STP
-0x00AA SNAP
-0x00ff global Dsap
-0x00e0 IPX
+00042 STP
+000AA SNAP
+000ff global Dsap
+000e0 IPX
 #IP Protocol numbers
-0x0001 1 ICMP
-0x0006 6 TCP
-0x0011 17 UDP
+00001 1 ICMP
+00006 6 TCP
+00011 17 UDP
 #TCP ports
-0x0007 echo
-0x0014 ftp-data
-0x0015 ftp-control
-0x0016 22 SSH
-0x0017 23 telnet
-0x0050 80 HTTP
-0x01bb 443 HTTPS
-0x006e 110 pop3
-0x0035 53 DNS
-0x0019 25 smpt
+00007 echo
+00014 ftp-data
+00015 ftp-control
+00016 22 SSH
+00017 23 telnet
+00050 80 HTTP
+001bb 443 HTTPS
+0006e 110 pop3
+00035 53 DNS
+00019 25 smpt
 #UDP ports
-0x0035 53 DNS
-0x0045 69 TFTP
+00035 53 DNS
+00045 69 TFTP
+#ICMP type 
+00000 echo reply
+00003 destination unreachable
+00005 redirect
+00008 echo
+00009 router advertisement
+0000b time exceeded
+#ICMP code
