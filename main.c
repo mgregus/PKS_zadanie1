@@ -97,9 +97,7 @@ void cpchar(u_char *source,u_char *dest, int n){
 	for(i = 0; i < n; i++){
 		dest[i] = source[i];
 	}	
-
-	/*printf("stvorka: %d.%d.%d.%d\n",source[0],source[1],source[2],source[3]);
-	printf("zoznam: %d.%d.%d.%d\n",dest[0],dest[1],dest[2],dest[3]);*/
+	
 }
 
 
@@ -593,6 +591,7 @@ int main(int argc, char *argv[]) {
 							nazovsth = nazov(decimalvalue,protokoly);
 							fprintf(output,"%s\n",nazovsth);
 							
+							
 							//pridanie na zaciatok sp zoznamu
 							if(uzly == NULL){
 								uzly = malloc(sizeof(UZLY));
@@ -637,6 +636,22 @@ int main(int argc, char *argv[]) {
 								}								
 								
 							}
+							
+							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
+							decimalvalue = hodnota(stvorka->protocol,1);
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							int optionals;
+										
+							if(decimalvalue == 6){
+								printf("tcp");
+							}
+							else if(decimalvalue == 17){
+								printf("udp");
+							}
+							else if(decimalvalue == 1){
+								printf("icmp");
+							}
+							
 							
 						}
 						
@@ -719,32 +734,53 @@ int main(int argc, char *argv[]) {
 				uzlypomocny = uzly;
 				uzlymax = uzly;
 				maxprijatych = uzlypomocny->prijatych;
+				int maximum = 0;
 				
 				while(uzlypomocny != NULL){
 					
-					if(uzlypomocny->prijatych > maxprijatych){
-						
-						maxprijatych = uzlypomocny->prijatych;
-						uzlymax = uzlypomocny;
+					if(uzlypomocny->prijatych > maximum)
+						maximum = uzlypomocny->prijatych;
 					
+					
+					uzlypomocny = uzlypomocny->next;				
+				}
+					
+				uzlypomocny = uzly;
+				
+				
+				while(uzlypomocny != NULL){
+					
+					if(uzlypomocny->prijatych == maximum){
+						
+						int i;
+						for(i = 0; i < 4; i++){
+							if(i == 3)
+								fprintf(output,"%d",uzlypomocny->adresa[i]);
+							else 	
+								fprintf(output,"%d.",uzlypomocny->adresa[i]);
+						}
+						fprintf(output,"\n");
 					}
 					
 					uzlypomocny = uzlypomocny->next;				
 				}
 				
-				int i;
-				for(i = 0; i < 4; i++){
-					if(i == 3)
-						fprintf(output,"%d",uzlymax->adresa[i]);
-					else 	
-						fprintf(output,"%d.",uzlymax->adresa[i]);
 				
-				}
-				
-				fprintf(output,"\t %d packetov\n",uzlymax->prijatych);
+				fprintf(output,"\t %d packetov\n",maximum);
 				
 				//uvolnenie celeho zoznamu
-			
+				uzlypomocny = NULL;
+				uzlymax = NULL;
+				
+				while(uzly != NULL){
+					uzlypomocny = uzly->next;
+					free(uzly);
+					uzly = uzlypomocny;
+					
+				}
+				uzlypomocny = NULL;
+				uzlymax = NULL;
+				uzly = NULL;
 			}
 				
 			
