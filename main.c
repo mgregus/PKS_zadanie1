@@ -643,13 +643,13 @@ int main(int argc, char *argv[]) {
 							int optionals;
 										
 							if(decimalvalue == 6){
-								printf("tcp");
+							//	printf("tcp");
 							}
 							else if(decimalvalue == 17){
-								printf("udp");
+							//	printf("udp");
 							}
 							else if(decimalvalue == 1){
-								printf("icmp");
+							//	printf("icmp");
 							}
 							
 							

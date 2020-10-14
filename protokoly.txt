@@ -5,8 +5,8 @@
 #LSAPs
 00042 STP
 000AA SNAP
-000ff global Dsap
-000e0 IPX
+000E0 IPX
+000FF IPX header
 #IP Protocol numbers
 00001 1 ICMP
 00006 6 TCP
