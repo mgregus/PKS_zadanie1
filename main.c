@@ -228,9 +228,7 @@ void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 char *nazov(int vstup, FILE *subor){
 	rewind(subor);
 	char *name;
-	char *pom;
 	name = malloc(200*sizeof(char));
-	pom = malloc(200*sizeof(char));
 	int count = 0; 
 	
 	char c;
@@ -246,24 +244,51 @@ char *nazov(int vstup, FILE *subor){
 			    	
         	if(hodnotasth == vstup){
         		fscanf(subor,"%[^\n]s",name);
-        		
-        		/*//check pre porty aj nazov
-				if(isdigit(name[0])){
-        			
-					fscanf(subor,"%s",pom);
-        			
-					while(pom[count++] != 0);
-        			strncat(name," \0",1);
-        			strncat(name, pom,count);
-        			free(pom);
-				}
-				*/
         		found = 1; 
         		break;
 			}
 		}
     }
+    //odstranenie medzeri
 	name = name + 1;
+	if(found == 1)
+		return name;
+	return "dany zaznam nie je v externom subore\0";
+}
+
+
+char *nazovicmp(int type, int code, FILE *subor){
+	rewind(subor);
+	char *name;
+	name = malloc(200*sizeof(char));
+	
+	char c;
+	char found = 0;
+	int hodnotasth;
+	int hodnatasth2;    
+	printf("hladane %d %d \n",type,code);
+	while((c=getc(subor))!= EOF){
+        if(isdigit(c)){
+        	ungetc(c,subor);
+        	fscanf(subor,"%d",&hodnotasth);
+     		    	
+        	if(hodnotasth == type){
+        		found = 1;
+        		if((fscanf(subor,"%d",&hodnatasth2)) == 1){
+        			printf("code:%d code %d\n",hodnatasth2,code);
+					if(hodnatasth2 == code){
+						fscanf(subor,"%[^\n]s",name);
+						return name;
+					}
+				}
+        		else{
+				fscanf(subor,"%[^\n]s",name);
+				return name;
+				}
+			}
+		}
+    }
+    //odstranenie medzeri
 	if(found == 1)
 		return name;
 	return "dany zaznam nie je v externom subore\0";
@@ -291,9 +316,15 @@ int main(int argc, char *argv[]) {
 	//pomocne .txt subory
 	FILE *output;
 	FILE *protokoly;
+	FILE *messages;
 	protokoly = fopen("protokoly.txt","r");
 	if(protokoly == NULL){
-		printf("neda sa otvorit externy subor\n");
+		printf("neda sa otvorit externy subor protokoly\n");
+		return 2;
+	}
+	messages = fopen("messages.txt","r");
+	if(protokoly == NULL){
+		printf("neda sa otvorit externy subor messages\n");
 		return 2;
 	}
 	//***********************************************************************************
@@ -391,7 +422,7 @@ int main(int argc, char *argv[]) {
 			
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
-				type = 0;
+					type = 0;
 					porcisloramca++;
 					
 					fprintf(output,"ramec: %d\n",porcisloramca);
@@ -613,7 +644,6 @@ int main(int argc, char *argv[]) {
 						//arp
 						if(type == 2054){
 							
-							//aj tu prerobit
 							cpchar((u_char*)data_packetu+20,arp->operation,2);
 							cpchar((u_char*)data_packetu+22,arp->sendermac,6);
 							cpchar((u_char*)data_packetu+28,arp->senderip,4);
@@ -732,7 +762,7 @@ int main(int argc, char *argv[]) {
 		//***********************************************************************************
 
 		//BOD Cislo 4
-		else if(modvypisu >= 4){
+		else if(modvypisu >= 4 && modvypisu <= 9){
 				
 				//http
 				if(modvypisu == 4){
@@ -764,12 +794,6 @@ int main(int argc, char *argv[]) {
 					port = 20;
 					fprintf(output,"FTP datove komunikacie\n");
 				}
-				//tfpt
-				else if(modvypisu == 10){
-					port = 69;
-					fprintf(output,"TFPT komunikacie\n");
-				}
-				
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
 				
@@ -829,7 +853,7 @@ int main(int argc, char *argv[]) {
 									printf("%d\n",porcisloramca);
 								}
 								
-							}
+							}/*
 							else if(decimalvalue == 17){
 								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
@@ -846,7 +870,7 @@ int main(int argc, char *argv[]) {
 							}
 							else if(decimalvalue == 1){
 							//	printf("icmp");
-							}
+							}*/
 							
 							
 						}
@@ -862,6 +886,360 @@ int main(int argc, char *argv[]) {
 			printf("port: %d pocet: %d\n",port,pocet_komunikacii);
 		
 		}
+			//tfpt
+		else if(modvypisu == 10){
+				pocet_komunikacii = 0;
+				vypisanych_komunikacii = 0;
+				port = 69;
+				fprintf(output,"vypis tftp komunikacii\n");
+				porcisloramca = 0;
+				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
+					type = 0;
+					porcisloramca++;		
+					//zistenie typu L2 ramca
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
+								
+					//zistenie obsahu na mieste ethertype 12-14B
+					pom = copyuchar(ethernet->type, 2);
+					decimalvalue = hodnota(pom, 2);
+					free(pom);
+					
+						
+					if(decimalvalue > 1500){
+						type = decimalvalue;
+					}
+					else{
+						continue;						
+					}
+					
+					//vypis vnoreneho protokolu pre ethernet
+					if(type > 0){
+					
+						
+						//ipv4
+						if(type == 2048){
+							
+							//aj tu prerobene
+							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);				
+											
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							decimalvalue = hodnota(stvorka->ihlv,1);
+							IHL = decimalvalue;
+							IHL = IHL << 28;
+							IHL = IHL >> 28; 
+							IHL = IHL * 4;
+							//printf("%d\n",IHL);
+							
+							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
+							decimalvalue = hodnota(stvorka->protocol,1);
+		
+							if(decimalvalue == 17){
+								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
+								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
+								
+								zport = hodnota(udp->sourceport,2);
+								cport = hodnota(udp->destport,2);
+							
+								if(cport == 69 && port == cport){
+									pocet_komunikacii++;
+									port = zport;
+									//printf("%d %d %d\n",cport, porcisloramca, port);
+								}
+								else if(cport == port || zport == port){
+									pocet_komunikacii++;
+								}
+									
+							
+							}							
+							
+						}
+						
+							
+					}
+						
+					
+					
+				}
+				//prechod a vypis tftp ramcov
+				//printf("tftpcok pre port: %d %d %d\n",pocet_komunikacii,port,porcisloramca);
+				porcisloramca = 0;
+				pcap_close(pcap_subor);	
+				pcap_subor = pcap_open_offline(filepath, chyba_packet_suboru);
+				
+				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
+					type = 0;
+					
+					porcisloramca++;
+										
+					//zistenie typu L2 ramca
+					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
+					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
+				
+					//zistenie obsahu na mieste ethertype 12-14B
+					pom = copyuchar(ethernet->type, 2);
+					decimalvalue = hodnota(pom, 2);
+					free(pom);
+						
+					if(decimalvalue > 1500){
+						type = decimalvalue;
+					}
+					else{
+						continue;						
+					}
+					
+					
+					if(type > 0){
+					
+						
+						//ipv4
+						if(type == 2048){
+							
+							//aj tu prerobene
+							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);				
+							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
+							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
+										
+											
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							decimalvalue = hodnota(stvorka->ihlv,1);
+							IHL = decimalvalue;
+							IHL = IHL << 28;
+							IHL = IHL >> 28; 
+							IHL = IHL * 4;
+							//printf("%d\n",IHL);
+							
+							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
+							decimalvalue = hodnota(stvorka->protocol,1);
+		
+							if(decimalvalue == 17){
+								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
+								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
+								
+								zport = hodnota(udp->sourceport,2);
+								cport = hodnota(udp->destport,2);
+								if(zport == port || cport == port){
+									vypisanych_komunikacii++;
+									
+									if(vypisanych_komunikacii <= 10 || vypisanych_komunikacii > (pocet_komunikacii-10)){
+										fprintf(output,"ramec: %d\n",porcisloramca);
+										fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
+										fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
+										fprintf(output,"Ethernet II\n");
+										vypisMacadries(ethernet,output);
+										type = hodnota(ethernet->type,2);
+										nazovsth = nazov(type,protokoly);
+										fprintf(output,"%s\n",nazovsth);
+										vypisIpadriesIP(stvorka, output);
+										decimalvalue = hodnota(stvorka->protocol,1);
+										nazovsth = nazov(decimalvalue,protokoly);
+										fprintf(output,"%s\n",nazovsth);
+					
+										
+										
+										if(zport < 1024){
+											nazovsth = nazov(zport,protokoly);
+											fprintf(output,"%s\n",nazovsth);
+										}
+										else if(cport < 1024){
+											nazovsth = nazov(cport,protokoly);
+											fprintf(output,"%s\n",nazovsth);
+										}
+										else{
+											fprintf(output,"port nie je v subore\n");
+										}
+										
+										
+										fprintf(output,"Zdrojovy port: %d\n",zport);
+										fprintf(output,"Cielovy port: %d\n",cport);
+										
+										int it = 0;
+										while(it < hlavicka_packetu->len){
+											if(it % 8 == 0 && it > 0)
+												fprintf(output,"  ");
+											if(it % 16 == 0)
+												fprintf(output,"\n");
+											fprintf(output,"%.2x ",data_packetu[it++]);
+										}
+										fprintf(output,"\n\n");
+										
+										
+									}
+									
+								}
+							
+							}							
+							
+						}
+						
+							
+					}
+				
+				}//koniec druheho prechodu
+			
+		
+		
+		}
+		//bod 4 ICMP
+		else if(modvypisu == 11){
+				pocet_komunikacii = 0;
+				vypisanych_komunikacii = 0;
+				fprintf(output,"vypis ICMPx komunikacii\n");
+				porcisloramca = 0;
+				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
+					type = 0;
+					porcisloramca++;		
+					//zistenie typu L2 ramca
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
+								
+					//zistenie obsahu na mieste ethertype 12-14B
+					pom = copyuchar(ethernet->type, 2);
+					decimalvalue = hodnota(pom, 2);
+					free(pom);
+					
+						
+					if(decimalvalue > 1500){
+						type = decimalvalue;
+					}
+					else{
+						continue;						
+					}
+					
+					//vypis vnoreneho protokolu pre ethernet
+					if(type > 0){
+					
+						
+						//ipv4
+						if(type == 2048){
+							
+							//aj tu prerobene
+							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);				
+											
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							decimalvalue = hodnota(stvorka->ihlv,1);
+							IHL = decimalvalue;
+							IHL = IHL << 28;
+							IHL = IHL >> 28; 
+							IHL = IHL * 4;
+							//printf("%d\n",IHL);
+							
+							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
+							decimalvalue = hodnota(stvorka->protocol,1);
+		
+							if(decimalvalue == 1){
+								pocet_komunikacii++;	
+							}							
+							
+						}
+						
+							
+					}
+						
+					
+					
+				}//koniec prveho prechodu
+				porcisloramca = 0;
+				pcap_close(pcap_subor);	
+				pcap_subor = pcap_open_offline(filepath, chyba_packet_suboru);
+				
+				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
+					type = 0;
+					
+					porcisloramca++;
+										
+					//zistenie typu L2 ramca
+					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
+					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
+				
+					//zistenie obsahu na mieste ethertype 12-14B
+					pom = copyuchar(ethernet->type, 2);
+					decimalvalue = hodnota(pom, 2);
+					free(pom);
+						
+					if(decimalvalue > 1500){
+						type = decimalvalue;
+					}
+					else{
+						continue;						
+					}
+					
+					
+					if(type > 0){
+					
+						
+						//ipv4
+						if(type == 2048){
+							
+							//aj tu prerobene
+							cpchar((u_char*)data_packetu+14,stvorka->ihlv,1);
+							cpchar((u_char*)data_packetu+23,stvorka->protocol,1);				
+							cpchar((u_char*)data_packetu+26,stvorka->sourceip,4);
+							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
+										
+											
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							decimalvalue = hodnota(stvorka->ihlv,1);
+							IHL = decimalvalue;
+							IHL = IHL << 28;
+							IHL = IHL >> 28; 
+							IHL = IHL * 4;
+							//printf("%d\n",IHL);
+							
+							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
+							decimalvalue = hodnota(stvorka->protocol,1);
+		
+							if(decimalvalue == 1){
+								cpchar((u_char*)data_packetu+14+IHL,icmp->type,1);
+								cpchar((u_char*)data_packetu+14+IHL+1,icmp->code,1);
+								vypisanych_komunikacii++;
+									
+									if(vypisanych_komunikacii <= 10 || vypisanych_komunikacii > (pocet_komunikacii-10)){
+										fprintf(output,"ramec: %d\n",porcisloramca);
+										fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
+										fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
+										fprintf(output,"Ethernet II\n");
+										vypisMacadries(ethernet,output);
+										type = hodnota(ethernet->type,2);
+										nazovsth = nazov(type,protokoly);
+										fprintf(output,"%s\n",nazovsth);
+										vypisIpadriesIP(stvorka, output);
+										decimalvalue = hodnota(stvorka->protocol,1);
+										nazovsth = nazov(decimalvalue,protokoly);
+										fprintf(output,"%s\n",nazovsth);
+					
+										//vypis type a code
+										decimalvalue = hodnota(icmp->type,1);
+										int kodik;
+										kodik = hodnota(icmp->code,1);
+										printf("%d hladane %d %d",porcisloramca,decimalvalue,kodik);
+										nazovsth = nazovicmp(decimalvalue,kodik, messages);
+										fprintf(output,"%s\n",nazovsth);							
+										int it = 0;
+										while(it < hlavicka_packetu->len){
+											if(it % 8 == 0 && it > 0)
+												fprintf(output,"  ");
+											if(it % 16 == 0)
+												fprintf(output,"\n");
+											fprintf(output,"%.2x ",data_packetu[it++]);
+										}
+										fprintf(output,"\n\n");
+										
+										
+									}
+									
+								}
+							
+							}							
+							
+						}
+										
+				}//koniec druheho prechodu
+		
+		}				
 		//BOD 4 ARP
 		else if(modvypisu == 12){
 						
@@ -913,8 +1291,8 @@ int main(int argc, char *argv[]) {
 			printf("port: %d pocet: %d\n",port,pocet_komunikacii);
 		
 		}
-				
-			
+					
+		}
 					
 			
 		//***********************************************************************************

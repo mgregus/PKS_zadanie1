@@ -29,11 +29,4 @@
 00043 67 DHCP
 00044 68 DHCP
 00045 69 TFTP
-#ICMP type 
-00000 echo reply
-00003 destination unreachable
-00005 redirect
-00008 echo
-00009 router advertisement
-0000b time exceeded
-#ICMP code
+
