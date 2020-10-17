@@ -47,7 +47,7 @@ typedef struct ARP{
 typedef struct TCP{
 	u_char sourceport[2];
 	u_char destport[2];
-	
+	u_char flag[2];
 }TCP;
 
 typedef struct ICMP{
@@ -311,6 +311,8 @@ int main(int argc, char *argv[]) {
 	int decimalvalue;
 	char *nazovsth;
 	int type;
+	int zport,cport;				
+	int IHL;
 	int maxprijatych;
 	int porcisloramca = 0;
 	char aktualizovane;
@@ -382,115 +384,7 @@ int main(int argc, char *argv[]) {
 		
 			//***********************************************************************************
 
-		else if(modvypisu == 1){
-			
-				porcisloramca = 0;
-				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& porcisloramca < 5*/){
-					type = 0;
-					porcisloramca++;
-					
-					fprintf(output,"ramec: %d\n",porcisloramca);
-					fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
-					fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
-					
-					
-					//zistenie typu L2 ramca
-					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
-					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
-					cpchar((u_char*)data_packetu+12,ethernet->type,2);
-					
-					
-					//zistenie obsahu na mieste ethertype 12-14B
-					pom = copyuchar(ethernet->type, 2);
-					decimalvalue = hodnota(pom, 2);
-					free(pom);
-					
-						
-					if(decimalvalue > 1500){
-						fprintf(output,"Ethernet II\n");
-						type = decimalvalue;
-					}
-					else{
-						
-						fprintf(output,"IEEE 802.3 ");
-						pom = copyuchar((u_char*)data_packetu+15,1);	
-						decimalvalue = hodnota(pom, 1);	
-						free(pom);
-						
-						//raw/lcc/llc+snap if splnene tak je to raw
-						if(decimalvalue == 255){
-							
-							fprintf(output,"- Raw\n");
-							vypisMacadries(ethernet,output);
-							nazovsth = nazov(decimalvalue,protokoly);
-							fprintf(output,"%s\n",nazovsth);
-						
-						}//llc/llc+snap
-						else{
-							
-							pom = copyuchar((u_char*)data_packetu+15,1);
-							decimalvalue = hodnota(pom, 1);	
-							free(pom);
-							
-							
-							//ma llc aj snap
-							if(decimalvalue == 170){
-								fprintf(output," s LLC a SNAP\n");
-								nazovsth = nazov(decimalvalue,protokoly);
-								fprintf(output,"SSAP: %s\n",nazovsth);
-								pom = copyuchar((u_char*)data_packetu+20,2);	
-								decimalvalue = hodnota(pom, 2);
-								free(pom);
-								vypisMacadries(ethernet,output);	
-								nazovsth = nazov(decimalvalue,protokoly);
-								fprintf(output,"Ether type: %s\n",nazovsth);
-							}//ma llc
-							else{
-								fprintf(output," s LLC\n");
-								vypisMacadries(ethernet,output);	
-								pom = copyuchar((u_char*)data_packetu+15,1);
-								decimalvalue = hodnota(pom, 1);	
-								free(pom);
-								nazovsth = nazov(decimalvalue,protokoly);
-								fprintf(output,"%s\n",nazovsth);
-							}					
-						}
-					
-					
-					}
-					
-					
-					
-					
-					
-					//vypis vnoreneho protokolu pre ethernet
-					if(type > 0){
-						vypisMacadries(ethernet,output);	
-						nazovsth = nazov(type,protokoly);
-						fprintf(output,"%s\n",nazovsth);
-					}
-					
-					
-						
-					//vypis ramca
-					int it = 0;
-					while(it < hlavicka_packetu->len){
-						if(it % 8 == 0 && it > 0)
-							fprintf(output,"  ");
-						if(it % 16 == 0)
-							fprintf(output,"\n");
-						fprintf(output,"%.2x ",data_packetu[it++]);
-					}
-					fprintf(output,"\n\n");
-				}
-			
-			}
-		
-		//***********************************************************************************
-		//***********************************************************************************
-
-		//aj Ip adresy uzlov a uzla ktori najviac prijal
-		else if(modvypisu == 3){
+		else if(modvypisu >= 1 && modvypisu <= 3){
 			
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
@@ -636,17 +530,64 @@ int main(int argc, char *argv[]) {
 								}								
 								
 							}
+												
+							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
+							decimalvalue = hodnota(stvorka->ihlv,1);
+							IHL = decimalvalue;
+							IHL = IHL << 28;
+							IHL = IHL >> 28; 
+							IHL = IHL * 4;
+							//printf("%d\n",IHL);
 							
 							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
 							decimalvalue = hodnota(stvorka->protocol,1);
-							//vypocet IHL a teda kolko je dlzka celej IPv4 hlavicky
-							int optionals;
+		
 										
 							if(decimalvalue == 6){
-							//	printf("tcp");
+								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
+								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
+								cpchar((u_char*)data_packetu+14+IHL+12,tcp->flag,2);
+								
+								zport = hodnota(tcp->sourceport,2);
+								cport = hodnota(tcp->destport,2);
+								if(zport < 1024){
+									nazovsth = nazov(zport,protokoly);
+									fprintf(output,"%s\n",nazovsth);
+								}
+								else if(cport < 1024){
+									nazovsth = nazov(cport,protokoly);
+									fprintf(output,"%s\n",nazovsth);
+								}
+								else{
+									fprintf(output,"port nie je v subore\n");
+								}
+								
+								
+								fprintf(output,"Zdrojovy port: %d\n",zport);
+								fprintf(output,"Cielovy port: %d\n",cport);
+								
 							}
 							else if(decimalvalue == 17){
-							//	printf("udp");
+								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
+								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
+								
+								zport = hodnota(udp->sourceport,2);
+								cport = hodnota(udp->destport,2);
+								if(zport < 1024){
+									nazovsth = nazov(zport,protokoly);
+									fprintf(output,"%s\n",nazovsth);
+								}
+								else if(cport < 1024){
+									nazovsth = nazov(cport,protokoly);
+									fprintf(output,"%s\n",nazovsth);
+								}
+								else{
+									fprintf(output,"port nie je v subore\n");
+								}
+								
+								
+								fprintf(output,"Zdrojovy port: %d\n",zport);
+								fprintf(output,"Cielovy port: %d\n",cport);
 							}
 							else if(decimalvalue == 1){
 							//	printf("icmp");
@@ -729,7 +670,7 @@ int main(int argc, char *argv[]) {
 				}
 				
 				//vypis najpocetnejsieho
-				fprintf(output,"Adresa uzla s najväèším poètom odoslaných paketov: \n");
+				fprintf(output,"Adresa uzla s najväèším poètom prijatych paketov: \n");
 				
 				uzlypomocny = uzly;
 				uzlymax = uzly;
@@ -766,7 +707,7 @@ int main(int argc, char *argv[]) {
 				}
 				
 				
-				fprintf(output,"\t %d packetov\n",maximum);
+				fprintf(output,"prijatych %d packetov\n",maximum);
 				
 				//uvolnenie celeho zoznamu
 				uzlypomocny = NULL;
@@ -781,7 +722,17 @@ int main(int argc, char *argv[]) {
 				uzlypomocny = NULL;
 				uzlymax = NULL;
 				uzly = NULL;
+			
 			}
+		
+		//***********************************************************************************
+		//***********************************************************************************
+
+		
+		else if(modvypisu >= 3){
+			
+		
+		}
 				
 			
 					
