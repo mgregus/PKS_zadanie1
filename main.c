@@ -47,7 +47,7 @@ typedef struct ARP{
 typedef struct TCP{
 	u_char sourceport[2];
 	u_char destport[2];
-	u_char flag[2];
+	u_char flag[1];
 }TCP;
 
 typedef struct ICMP{
@@ -349,6 +349,10 @@ int main(int argc, char *argv[]) {
 	int port;
 	int pocet_komunikacii;
 	int vypisanych_komunikacii;
+	int pole_komunikacii[4500] = {-1};
+	int private_port;
+	u_int flag;
+	char zaznamenane;
 	char aktualizovane;
 	char rovnake;
 	//***********************************************************************************
@@ -374,6 +378,16 @@ int main(int argc, char *argv[]) {
 	ICMP *icmp = malloc(sizeof(ICMP));
 	
 	//***********************************************************************************
+	printf("vypis bodov 1-3 vratane cisla portu a protokolu app. vrstvy zadajte 1-3\n");
+	printf("vypis bodu 4a) HTTP zadajte 4\n");
+	printf("vypis bodu 4b) HTTPs zadajte 5\n");
+	printf("vypis bodu 4c) TELNET zadajte 6\n");
+	printf("vypis bodu 4d) SSH zadajte 7\n");
+	printf("vypis bodu 4e) FTP riadiace zadajte 8\n");
+	printf("vypis bodu 4f) FTP datove zadajte 9\n");
+	printf("vypis bodu 4g) TFTP zadajte 10\n");
+	printf("vypis bodu 4h) ICMP zadajte 11\n");
+	printf("vypis bodu 4i) ARP zadajte 12\n\n");
 	
 	//loop to keep analyzing new files
 	while(modvypisu != -1){
@@ -843,35 +857,62 @@ int main(int argc, char *argv[]) {
 							if(decimalvalue == 6){
 								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
-								cpchar((u_char*)data_packetu+14+IHL+12,tcp->flag,2);
-								
+								cpchar((u_char*)data_packetu+14+IHL+13,tcp->flag,1);
+							
 								zport = hodnota(tcp->sourceport,2);
 								cport = hodnota(tcp->destport,2);
 								
+								//ak je to hladany typ komunikacie
 								if(zport == port || cport == port){
-									pocet_komunikacii++;
-									printf("%d\n",porcisloramca);
+									
+									if(zport < cport)
+										private_port = cport;
+									else
+										private_port = zport;
+									
+									//urcenie aky flag je nastaveny vo flag priznaku	
+									flag = 0; 
+									flag = hodnota(tcp->flag,1);
+									flag = flag << 29;
+									flag = flag >> 29;
+									
+									int i;
+									zaznamenane = 0;
+									//ci uz je v zaznamoch
+									for(i = 0; i < pocet_komunikacii; i++){
+										//ak sa nasiel zaznam
+										if(pole_komunikacii[i*3] == private_port){
+											pole_komunikacii[i*3+1]++;
+											//ak bola zacata
+											if(pole_komunikacii[i*3+2] != -1){
+												//ak je fin
+												if(flag == 1)
+													pole_komunikacii[i*3+2] += 1;
+												//ak je rst
+												if(flag == 4)
+													pole_komunikacii[i*3+2] += 11;
+											}
+											zaznamenane = 1;
+										}
+									}
+									//ak neexistoval zaznam este skontrolovat ci je syn
+									if(zaznamenane == 0){
+										pole_komunikacii[pocet_komunikacii*3] = private_port;
+										pole_komunikacii[pocet_komunikacii*3+1] = 1;									
+									
+										//ak syn tak 0
+										if(flag == 2)	
+											pole_komunikacii[pocet_komunikacii*3+2] = 0;
+										//else -1
+										else
+											pole_komunikacii[pocet_komunikacii*3+2] = -1;
+										pocet_komunikacii++;
+									}
+									
 								}
 								
-							}/*
-							else if(decimalvalue == 17){
-								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
-								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
 								
-								zport = hodnota(udp->sourceport,2);
-								cport = hodnota(udp->destport,2);
-							
-								if(zport == port || cport == port){
-									pocet_komunikacii++;
-									printf("%d\n",porcisloramca);
-								}
-								
-							
-							}
-							else if(decimalvalue == 1){
-							//	printf("icmp");
-							}*/
-							
+							}							
 							
 						}
 						
@@ -881,10 +922,29 @@ int main(int argc, char *argv[]) {
 					
 					
 				}//koniec prveho prechodu
+			/*
+			uplne komunikacie su tie co mali nastavene 
+			RST 1x  ==> 11
+			FIN + RST ==> 12
+			FIN 2x ==> 2
 			
-			//zistenie poctu komunikacii		
-			printf("port: %d pocet: %d\n",port,pocet_komunikacii);
-		
+			neuplne su 
+				nemaju fin 2x ani rst ==> 0
+				neboli zacate syn ==> -1
+			*/
+			/*
+			//vysvetlujuci pomocny vypis			
+			int i ;
+			for(i = 0; i < pocet_komunikacii; i++){
+				printf("komunikacia %d\n",i+1);
+				printf("port: %d\n",pole_komunikacii[3*i]);
+				printf("pocet: %d\n",pole_komunikacii[3*i+1]);
+				printf("fin: %d\n",pole_komunikacii[3*i+2]);
+			}
+
+			*/
+			//druhy prechod vypis uplnej a neuplnej komunikacie ak sa vyskytuje 
+					
 		}
 			//tfpt
 		else if(modvypisu == 10){
@@ -1227,7 +1287,6 @@ int main(int argc, char *argv[]) {
 											fprintf(output,"%.2x ",data_packetu[it++]);
 										}
 										fprintf(output,"\n\n");
-										
 										
 									}
 									
