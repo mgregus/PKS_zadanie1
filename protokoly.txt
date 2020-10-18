@@ -29,4 +29,5 @@
 00043 67 DHCP client
 00044 68 DHCP server
 00045 69 TFTP
+0076c 1900 simple discovery protocol
 

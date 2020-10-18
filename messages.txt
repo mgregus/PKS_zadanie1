@@ -14,26 +14,26 @@
 3 11 Destination Unreachable network unreachable
 3 12 Destination Unreachable host unreachable
 3 13 Destination Unreachable communication administratively prohibited
-4 source quench
+4 0 source quench
 5 0 redirect datagram for network
 5 1 redirect datagram for host
 5 2 redirect datagram for tos & network
 5 3 redirect datagram for tos & host
 8 0 echo (ping) request
-9 RA
-10 router selection
+9 0 RA
+10 0 router selection
 11 0 time exceeded TTL exceeded in transit
 11 1 time exceeded fragment reassembly time exceeded
 12 0 parameter problem pointer indicates error
 12 1 parameter problem missing required option
 12 2 parameter problem bad length
-13 timestamp
-14 timestamp reply
-15 information request
-16 information reply
-17 address mask request 
-18 address mask reply
-19 traceroute
+13 0 timestamp
+14 0 timestamp reply
+15 0 information request
+16 0 information reply
+17 0 address mask request 
+18 0 address mask reply
+19 0 traceroute
 
 
 
