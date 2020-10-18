@@ -876,7 +876,6 @@ int main(int argc, char *argv[]) {
 									flag = hodnota(tcp->flag,1);
 									flag = flag << 29;
 									flag = flag >> 29;
-									
 									int i;
 									zaznamenane = 0;
 									//ci uz je v zaznamoch
