@@ -276,14 +276,11 @@ char *nazovicmp(int type, int code, FILE *subor){
         	ungetc(c,subor);  
 			fscanf(subor,"%d",&hodnotasth);
 			fscanf(subor,"%d",&pomcode);
-		//	printf("%d %d\n",hodnotasth,pomcode);
 			if(hodnotasth == type){
-        		if(c >= 48 && c <= 57){
-					found = 1;
-					if(pomcode == code){
+    				if(pomcode == code){
+						found = 1;
 						fscanf(subor,"%[^\n]s",name);
 						return name;
-					}
 				}
 			}
 			
@@ -351,10 +348,11 @@ int main(int argc, char *argv[]) {
 	int port;
 	int pocet_komunikacii;
 	int vypisanych_komunikacii;
-	int pole_komunikacii[4500] = {-1};
+	int pole_komunikacii[6500] = {0};
 	int private_port;
 	u_int flag;
 	int uplna, neuplna;
+	int operation;
 	char zaznamenane;
 	char aktualizovane;
 	char rovnake;
@@ -831,7 +829,7 @@ int main(int argc, char *argv[]) {
 				}
 				
 				int i ;
-				for(i = 0; i < 4500; i++){
+				for(i = 0; i < 6500; i++){
 					pole_komunikacii[i] = 0;
 				}	
 				pocet_komunikacii = 0;
@@ -1634,7 +1632,11 @@ int main(int argc, char *argv[]) {
 						
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
-				
+				int i ;
+				for(i = 0; i < 6500; i++){
+					pole_komunikacii[i] = 0;
+				}	
+					
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
 					type = 0;
@@ -1668,20 +1670,182 @@ int main(int argc, char *argv[]) {
 							cpchar((u_char*)data_packetu+28,arp->senderip,4);
 							cpchar((u_char*)data_packetu+32,arp->targetmac,6);
 							cpchar((u_char*)data_packetu+38,arp->targetip,4);
-							decimalvalue = hodnota(arp->operation,2);
+							//ci je request / reply
+							operation = hodnota(arp->operation,2);
+							//berieme ip adresu v zavislosti od typu operacie
+							if(operation == 1){
+								decimalvalue = hodnota(arp->targetip,4);
+							}
+							else if(operation == 2){
+								decimalvalue = hodnota(arp->senderip,4);
+							}
+							
+							zaznamenane = 0;
+							//printf("ramec: %d decimalvalue %d\n",porcisloramca,decimalvalue);
+							//zistime ci ide o staru komunikaciu
+							for(i = 0; i < pocet_komunikacii; i++){
+								if(operation == 1){
+									//je to request a teda patri k requestu na ktori este nebol reply cize ta ista komunikacia
+									if(pole_komunikacii[i*2] == decimalvalue && pole_komunikacii[i*2+1] == -1){
+										zaznamenane = 1;
+										break;
+									}
+								}
+								else if(operation == 2){
+									//ak bola komunikacia requesty bez reply na danu adresu, tak toto ukoncuje komunikaciu
+									if(pole_komunikacii[i*2] == decimalvalue && pole_komunikacii[i*2+1] == -1){
+										zaznamenane = 1;
+										pole_komunikacii[i*2+1] = porcisloramca;
+										break;
+									}
+								}
+							} 
+							
+							//ide o novu komunikaciu
+							if(zaznamenane == 0){
+								pole_komunikacii[pocet_komunikacii*2] = decimalvalue;
+								if(operation == 1)
+									pole_komunikacii[pocet_komunikacii*2+1] = -1;
+								else if(operation == 2)
+									pole_komunikacii[pocet_komunikacii*2+1] = porcisloramca;
+								pocet_komunikacii++;
+							}
 								
 						}
 						
 					
 					
-				}//koniec prveho prechodu
+				}
 			
-			//zistenie poctu komunikacii		
-			printf("port: %d pocet: %d\n",port,pocet_komunikacii);
 		
-		}
+			}//koniec prveho prechodu
+			
+			porcisloramca = 0;
+			pcap_close(pcap_subor);	
+			pcap_subor = pcap_open_offline(filepath, chyba_packet_suboru);
+			//printf("k3 %d\n",pocet_komunikacii);
+			while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
+					type = 0;
+					porcisloramca++;		
+					//zistenie typu L2 ramca
+					cpchar((u_char*)data_packetu,ethernet->Dmac,6);
+					cpchar((u_char*)(data_packetu+6),ethernet->Smac,6);
+					cpchar((u_char*)data_packetu+12,ethernet->type,2);
+								
+					//zistenie obsahu na mieste ethertype 12-14B
+					pom = copyuchar(ethernet->type, 2);
+					decimalvalue = hodnota(pom, 2);
+					free(pom);
 					
-		}
+						
+					if(decimalvalue > 1500){
+						type = decimalvalue;
+					}
+					else{
+						continue;						
+					}
+					
+					//vypis vnoreneho protokolu pre ethernet
+					if(type > 0){
+					
+						
+						//arp
+						if(type == 2054){
+							
+							//aj tu prerobene
+							cpchar((u_char*)data_packetu+20,arp->operation,2);
+							cpchar((u_char*)data_packetu+22,arp->sendermac,6);
+							cpchar((u_char*)data_packetu+28,arp->senderip,4);
+							cpchar((u_char*)data_packetu+32,arp->targetmac,6);
+							cpchar((u_char*)data_packetu+38,arp->targetip,4);
+							//ci je request / reply
+							operation = hodnota(arp->operation,2);
+							//berieme ip adresu v zavislosti od typu operacie
+							if(operation == 1){
+								decimalvalue = hodnota(arp->targetip,4);
+							}
+							else if(operation == 2){
+								decimalvalue = hodnota(arp->senderip,4);
+							}
+							
+							//zistime cislo komunikacie
+								
+							for(i = 0; i < pocet_komunikacii; i++){
+								if(operation == 1){
+									
+									if(pole_komunikacii[i*2] == decimalvalue && ((pole_komunikacii[i*2+1] == -1) || ( porcisloramca <= pole_komunikacii[i*2+1]))){
+										vypisanych_komunikacii = i+1;
+										break;
+									}
+								}
+								else if(operation == 2) {
+								
+									if(pole_komunikacii[i*2+1] == porcisloramca){
+										vypisanych_komunikacii = i+1;
+										break;
+									}
+								}
+							} 
+														
+							fprintf(output,"komunikacia cislo: %d\n",vypisanych_komunikacii);
+							if(operation == 1){
+								fprintf(output,"ARP request, ");
+								fprintf(output,"IP adresa: %d.%d.%d.%d, MAC adresa: ?????\n",arp->senderip[0],arp->senderip[1],arp->senderip[2],arp->senderip[3]);
+								vypisIpadriesARP(arp, output);
+								fprintf(output,"ramec: %d\n",porcisloramca);	
+								fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
+								fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
+								fprintf(output,"Ethernet II\n");
+								type = hodnota(ethernet->type,2);
+								nazovsth = nazov(type,protokoly);
+								fprintf(output,"%s\n",nazovsth);
+								vypisMacadries(ethernet,output);
+								int it = 0;
+								while(it < hlavicka_packetu->len){
+									if(it % 8 == 0 && it > 0)
+										fprintf(output,"  ");
+									if(it % 16 == 0)
+										fprintf(output,"\n");
+										fprintf(output,"%.2x ",data_packetu[it++]);
+								}
+								fprintf(output,"\n\n");	
+							}
+							if(operation == 2){
+								fprintf(output,"ARP reply, ");
+								fprintf(output,"IP adresa: %d.%d.%d.%d, MAC adresa: %.2x %.2x %.2x %.2x %.2x %.2x\n",arp->senderip[0],arp->senderip[1],arp->senderip[2],arp->senderip[3],arp->sendermac[0],arp->sendermac[1],arp->sendermac[2],arp->sendermac[3],arp->sendermac[4],arp->sendermac[5]);
+								vypisIpadriesARP(arp, output);
+								fprintf(output,"ramec: %d\n",porcisloramca);	
+								fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
+								fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
+								fprintf(output,"Ethernet II\n");
+								type = hodnota(ethernet->type,2);
+								nazovsth = nazov(type,protokoly);
+								fprintf(output,"%s\n",nazovsth);
+								vypisMacadries(ethernet,output);
+								int it = 0;
+								while(it < hlavicka_packetu->len){
+									if(it % 8 == 0 && it > 0)
+										fprintf(output,"  ");
+									if(it % 16 == 0)
+										fprintf(output,"\n");
+										fprintf(output,"%.2x ",data_packetu[it++]);
+								}
+								fprintf(output,"\n\n");	
+							}
+							
+								
+						}
+						
+					
+					
+				}
+			
+		
+			//printf("port: %d pocet: %d\n",port,pocet_komunikacii);
+		
+			}	
+		
+		}//arp
 					
 			
 		//***********************************************************************************
@@ -1689,7 +1853,7 @@ int main(int argc, char *argv[]) {
 		else if(modvypisu == 13){
 				
 				int i ;
-				for(i = 0; i < 4500; i++){
+				for(i = 0; i < 6500; i++){
 					pole_komunikacii[i] = 0;
 				}	
 						
