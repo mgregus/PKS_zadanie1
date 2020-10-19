@@ -7,6 +7,7 @@
 
 /* run this program using the console pauser or add your own getch, system("pause") or input loop */
 
+//struktura uchovavajuva mac adresy a ethertype
 typedef struct Ethernet{
 	u_char Dmac[6];
 	u_char Smac[6];
@@ -14,7 +15,7 @@ typedef struct Ethernet{
 }Ethernet;
 
 
-
+//struktura uchovavajuca dlzku ipv4 hlavicky, ipv4 adresy, a protokol vyssej(L4) vrstvy
 typedef struct IPv4{
 	u_char ihlv[1];
 	u_char protocol[1];
@@ -22,18 +23,21 @@ typedef struct IPv4{
 	u_char destip[4];
 }IPv4;
 
+//struktura uchovavajuva ipv4 adresy, a protokol vyssej(L4) vrstvy
 typedef struct IPv6{
 	u_char protocol[1];
 	u_char sourceip[16];
 	u_char destip[16];
 }IPv6;
 
+
+//struktura uchovavajuca potrebne udaje pre arp protokol
 typedef struct ARP{
 	//request /reply
 	u_char operation[2];
 	
 	//request unicast mac of sender
-	//reply unicast mac of reciever which was unknown
+	//reply unicast mac of reciever which was unknown before request was sent
 	u_char sendermac[6];
 	u_char senderip[4];
 	
@@ -43,30 +47,36 @@ typedef struct ARP{
 	u_char targetip[4];
 }ARP;
 
-
+//struktura uchovavajuca zdrojovy a cielovy port a potrebne flagy nastavene v tcp hlavicke
 typedef struct TCP{
 	u_char sourceport[2];
 	u_char destport[2];
 	u_char flag[1];
 }TCP;
 
+//struktura uchovavajuca typ a kod z hlavicky icmp protokolu
 typedef struct ICMP{
 	u_char type[1];
 	u_char code[1];
 }ICMP;
 
+//struktura uchovavajuca zdrojovy a cielovy port z tcp hlavicky
 typedef struct UDP{
 	u_char sourceport[2];
 	u_char destport[2];
 }UDP;
 
 
+//struktura sluziaca na vytvorenie spajaneho zoznamu pre Ip adresy prijimajucich uzlov
 typedef struct UZLY{
 	u_char *adresa;
 	int prijatych;
 	struct UZLY *next;
 }UZLY;
 
+
+//funkcia vypocita dlzku ramcu ktori realne presiel po mediu
+//vstupom funckie je velkost ramcu api
 int dlzka_paketu_po_mediu(int apilength){
 	int medialength = 0;
 		
@@ -79,6 +89,7 @@ int dlzka_paketu_po_mediu(int apilength){
 	return medialength;
 }
 
+//funckia vrati na podretazec o dlzke n znakov z retazca na vstupe
 u_char *copyuchar(u_char *source, int n){
 	int i;
 	u_char *dest;
@@ -91,6 +102,8 @@ u_char *copyuchar(u_char *source, int n){
 	return dest;
 }
 
+
+//funkcia skopiruje n znakov zo zdrojoveho retazca do cieloveho retazca
 void cpchar(u_char *source,u_char *dest, int n){
 	int i;
 	
@@ -101,7 +114,8 @@ void cpchar(u_char *source,u_char *dest, int n){
 }
 
 
-//postupnost bajtov zmeni na desiatkove cislo, funguje len do 4B
+//postupnost bajtov zmeni na desiatkove cislo, funguje len do 4B(kapacita int premmenej)
+//funkcia vrati desiatkovu hondotu cisla, ktore je reprezentovane ako postupnost bajtov
 int hodnota(u_char *pole, int n){
 	int i,j,iter;
 	iter = 0;
@@ -116,7 +130,8 @@ int hodnota(u_char *pole, int n){
 	return i;
 }
 
-
+//funkcia vypise mac adresy z ethernet struktury do suboru
+//vstupom je ethernet struktura, a subor
 void vypisMacadries(Ethernet *pt, FILE *output){
 			
 			int i;
@@ -132,6 +147,8 @@ void vypisMacadries(Ethernet *pt, FILE *output){
 			fprintf(output,"\n");			
 }
 
+//funkcia vypise ipv4 adresy z ipv4 struktury do suboru
+//vstupom je ipv4 struktura, a subor
 void vypisIpadriesIP(IPv4 *pt, FILE *output){
 			int i;			
 			fprintf(output,"Zdrojová Ip adresa: ");
@@ -154,6 +171,9 @@ void vypisIpadriesIP(IPv4 *pt, FILE *output){
 			
 }
 
+
+//funkcia vypise ipv6 adresy z ipv4 struktury do suboru
+//vstupom je ipv6 struktura, a subor
 void vypisIpadriesIPv6(IPv6 *pt, FILE *output){
 			int i;			
 			fprintf(output,"Zdrojová Ipv6 adresa: ");
@@ -186,6 +206,9 @@ void vypisIpadriesIPv6(IPv6 *pt, FILE *output){
 			
 }
 
+
+//funkcia vypisi ip adresy z arp struktury do suboru
+//vstupom je arp struktura a subor
 void vypisIpadriesARP(ARP *pt, FILE *output){
 			int i;			
 			fprintf(output,"Sender Ip adresa: ");
@@ -208,7 +231,8 @@ void vypisIpadriesARP(ARP *pt, FILE *output){
 			
 }
 
-
+//vypisanie ip adries zo spajaneho zoznamu do suboru
+//vstup je jeden zaznam zo spajaneho zoznamu, a subor
 void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 		
 			int i;			
@@ -224,7 +248,10 @@ void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 }
 
 
-
+//funkcia vrati nazov portu alebo protokolu(pre jeho cislo) zo suboru
+//vstupom je vrstva na ktorej sa nachadza protokol ku ktoreho cislu chceme urcit nazov
+//cislo tohto protokolu/portu
+//nazov suboru, z ktoreho citame
 char *nazov(int layer, int code, FILE *subor){
 	rewind(subor);
 	char *name;
@@ -239,6 +266,7 @@ char *nazov(int layer, int code, FILE *subor){
 /*	if(layer == 3)
 	printf("%d %d\n",layer, code);*/
 	novy = 0; 
+	//citanie do konca suboru
 	while((c=getc(subor)) != EOF){
         if(c >= 48  && c <= 57){
         	ungetc(c,subor); 
@@ -247,6 +275,7 @@ char *nazov(int layer, int code, FILE *subor){
 			fscanf(subor,"%x",&pomcode);
 			fscanf(subor,"%[^\n]s",pom);		
 			
+			//ak sme nasli hladany kod
 			if(vrstva == layer){
     				if(pomcode == code){
 						found = 1;
@@ -281,6 +310,11 @@ int cisloportu(char *ret, FILE *subor){
 	return -1;
 }
 
+
+//funkcia vrati ICMP spravu(pre jej typ a code cislo) zo suboru
+//vstupom je typ icmp spravy ku ktoreho cislu chceme urcit obsah spravy
+//code hondota pre dany typ 
+//nazov suboru, z ktoreho citame
 char *nazovicmp(int type, int code, FILE *subor){
 	rewind(subor);
 	char *name;
@@ -293,9 +327,12 @@ char *nazovicmp(int type, int code, FILE *subor){
 	char novy;
 	int pomcode;    
 	
+	
+	//citanie do konca suboru
 	novy = 0; 
 	while((c=getc(subor)) != EOF){
 		//printf("%c",c);
+		//ak sme nasli zhodu
         if(c >= 48  && c <= 57){
         	ungetc(c,subor);  
 			fscanf(subor,"%d",&hodnotasth);
@@ -332,15 +369,18 @@ int main(int argc, char *argv[]) {
 	filename = malloc(200);
 	int filenamelength = 0;
 	//printf("%s ",filepath);
+	
+	//definuje aky obsah .pcap suboru bude vypisany
 	int modvypisu = 0;
+	
 	int pocetvypisov = 0;
 	//***********************************************************************************
 	
 	//pomocne .txt subory
-	FILE *output;
-	FILE *protokoly;
-	FILE *cisla;
-	FILE *messages;
+	FILE *output;//vypis programu
+	FILE *protokoly;//mena protokolov a portov
+	FILE *cisla;//cisla portov a aj niektorych protokolov
+	FILE *messages;//icmp spravy
 	protokoly = fopen("protokoly1.txt","r");
 	if(protokoly == NULL){
 		printf("neda sa otvorit externy subor protokoly\n");
@@ -367,25 +407,25 @@ int main(int argc, char *argv[]) {
 	//***********************************************************************************
 	
 	//pomocne premmenne
-	u_char *pom;
-	int decimalvalue;
-	char *nazovsth;
-	int type;
-	int zport,cport;				
-	int IHL;
-	int maxprijatych;
+	u_char *pom; // pomocnna premmenna obvykle len na ulozenie postupnosti bajtov, z ktorich zistime decimalnu hodnotu
+	int decimalvalue;//decimalna hodnota nejakej postupnosti bajtov
+	char *nazovsth;//nazov protokolu/portu nacitany zo suboru
+	int type;//ethertype zistene z ramca
+	int zport,cport;//cislo zdrojoveho, cieloveho portu zistene z ramca		
+	int IHL; //dlzka ip hlavicky zistena z ramca
+	int maxprijatych;//pre uzol ip, ktori prijal najviac ramcov
 	int porcisloramca = 0;
-	int port;
-	int pocet_komunikacii;
-	int vypisanych_komunikacii;
-	int pole_komunikacii[6500] = {0};
-	int private_port;
-	u_int flag;
-	int uplna, neuplna;
-	int operation;
-	char zaznamenane;
-	char aktualizovane;
-	char rovnake;
+	int port;//pomocne cislo portu
+	int pocet_komunikacii;//pocet nejakej konkretnej komunikacie vo filtre
+	int vypisanych_komunikacii;//pocet uz vypisanych komunikacii potrebne pre dodrzanie vypisu prvych 10  a poslednych 10 ramcov
+	int pole_komunikacii[6500] = {0}; // pomocne pole na ukladanie hodnot potrebne pre filtre
+	int private_port; 
+	u_int flag; // hodnota flagu tcp nacitana z ramcu
+	int uplna, neuplna; //sem sa uklada ktori zaznam z pole_komunikacii je uplna a ktora neuplna komunikacia
+	int operation; // arp typ operacie nacitany zo suboru
+	char zaznamenane; // pomocna premmena 
+	char aktualizovane; //pomocna premmenaa
+	char rovnake; // pomocna premmnnna
 	//***********************************************************************************
 	
 	
@@ -397,6 +437,7 @@ int main(int argc, char *argv[]) {
 	IPv6 *sestka = malloc(sizeof(IPv6));
 	ARP *arp = malloc(sizeof(ARP));
 	IPv4 *stvorka = malloc(sizeof(IPv4));
+	//pre potreby spajaneho zoznamu pre zistenie ip uzlov, ktore prijali najviac ramcov
 	UZLY *uzly = NULL;
 	UZLY *uzlypomocny = NULL;
 	UZLY *uzlymax = NULL;
@@ -420,7 +461,8 @@ int main(int argc, char *argv[]) {
 	printf("ipv4 %d\n",cisloportu("ipv4\0",cisla));
 	printf("arp %d\n",cisloportu("arp\0",cisla));
 	*/
-	//nazvy prepinacov zo stvorky
+	
+	//nacitanie niektorych nazvov portov zo suboru najme pre potrebu vypisu na 4 vrstve
 	int styriarp = cisloportu("arp\0",cisla);
 	int styritcp = cisloportu("tcp\0",cisla);
 	int styriudp = cisloportu("udp\0",cisla);
@@ -441,10 +483,13 @@ int main(int argc, char *argv[]) {
 	printf("vypis bodu 4h) ICMP zadajte 11\n");
 	printf("vypis bodu 4i) ARP zadajte 12\n");
 	printf("vypis bodu 4i) TFTP po jednotlivych komunikaciach zadajte 13\n\n");
+	//***********************************************************************************
 	
-	//loop to keep analyzing new files
+	
+	//cyklus v ktorom si nacitam vzdy novy subor a vypisem pren konkretny typ vypisu 
 	while(modvypisu != -1){
 	
+		//otvorenie konkretneho .pcap suboru z priecinku podla uzivatelovej volby
 		sprintf(filepath,"pcap/");
 		filenamelength = 0;
 		printf("zadajde nazov .pcap suboru\n");
@@ -463,12 +508,14 @@ int main(int argc, char *argv[]) {
 			printf("Chyba pri otvarani packet suboru: %s\n",chyba_packet_suboru);
 			printf("zadajte mod vypisu: \n");
 			scanf("%d",&modvypisu);
+			//ukoncenie programu ak si zvolime modvypisu pre koniec
 			if(modvypisu == -1){	
 			break;
 			}
 			continue;
 		}
-	
+		
+		//pridava vzdy i+1 do nazvu vypisu pre vypis v kazdom cykle
 		pocetvypisov++;
 		sprintf(nazovvypisu,"output%d.txt",pocetvypisov);
 		output = fopen(nazovvypisu,"w");
@@ -477,6 +524,7 @@ int main(int argc, char *argv[]) {
 		printf("zadajte mod vypisu: \n");
 		scanf("%d",&modvypisu);
 		
+		//ukoncenie programu
 		if(modvypisu == -1){
 			fclose(output);
 			pcap_close(pcap_subor);			
@@ -484,10 +532,11 @@ int main(int argc, char *argv[]) {
 		}
 		
 			//***********************************************************************************
-
+		//vypis vsetkeho potrebneho definovaneho v bodoch 1 az 3
 		else if(modvypisu >= 1 && modvypisu <= 3){
 			
 				porcisloramca = 0;
+				//nacitavanie ramcov do konca .pcap suboru
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
 					type = 0;
 					porcisloramca++;
@@ -508,11 +557,11 @@ int main(int argc, char *argv[]) {
 					decimalvalue = hodnota(pom, 2);
 					free(pom);
 					
-						
+					//ak je vacsi ako 1500 tak je to ethernet
 					if(decimalvalue > 1500){
 						fprintf(output,"Ethernet II\n");
 						type = decimalvalue;
-					}
+					}//inak ieee
 					else{
 						
 						fprintf(output,"IEEE 802.3 ");
@@ -586,6 +635,8 @@ int main(int argc, char *argv[]) {
 							nazovsth = nazov(3,decimalvalue,protokoly);
 							fprintf(output,"%s\n",nazovsth);
 							
+							//monitorovanie ipv4 adries prijimajucich uzlov za ucelom zistenie ktori uzol prijal najviac
+							//jednotlive adresy su ulozene v spajanom zozname, nizsie je sprava spajaneho zoznamu spravena
 							
 							//pridanie na zaciatok sp zoznamu
 							if(uzly == NULL){
@@ -643,7 +694,7 @@ int main(int argc, char *argv[]) {
 							//analyzovanie vnoreneho protokolu TCP/UDP a adekvatny vypis portu
 							decimalvalue = hodnota(stvorka->protocol,1);
 		
-										
+							//ak je tcp			
 							if(decimalvalue == 6){
 								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
@@ -651,6 +702,7 @@ int main(int argc, char *argv[]) {
 								
 								zport = hodnota(tcp->sourceport,2);
 								cport = hodnota(tcp->destport,2);
+								//zistenie vnorenych portov
 								if(zport < 1024){
 									nazovsth = nazov(4,zport,protokoly);
 									fprintf(output,"%s\n",nazovsth);
@@ -677,7 +729,7 @@ int main(int argc, char *argv[]) {
 								fprintf(output,"Zdrojovy port: %d\n",zport);
 								fprintf(output,"Cielovy port: %d\n",cport);
 								
-							}
+							}//ak je udp
 							else if(decimalvalue == 17){
 								cpchar((u_char*)data_packetu+14+IHL,udp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,udp->destport,2);
@@ -709,7 +761,7 @@ int main(int argc, char *argv[]) {
 								
 								fprintf(output,"Zdrojovy port: %d\n",zport);
 								fprintf(output,"Cielovy port: %d\n",cport);
-							}
+							}//ak je icmp
 							else if(decimalvalue == 1){
 								cpchar((u_char*)data_packetu+14+IHL,icmp->type,1);
 								cpchar((u_char*)data_packetu+14+IHL+1,icmp->code,1);
@@ -779,9 +831,9 @@ int main(int argc, char *argv[]) {
 					
 						//vypis adries uzlov
 				fprintf(output,"Zoznam IPv4 adries vsetkych prijimajucich uzlov: \n");
-				//prebehnutie celeho zoznamu
+			
 				uzlypomocny = uzly;
-				
+				//vypis vsetkych ip adries prijimajucich uzlov
 				while(uzlypomocny != NULL){
 					int i;
 					
@@ -798,7 +850,7 @@ int main(int argc, char *argv[]) {
 				
 				//vypis najpocetnejsieho
 				fprintf(output,"Adresa uzla s najväèším poètom prijatych paketov: \n");
-				
+				//prebehnutie celeho zoznamu pre zistenie ake je maximum prijatych sprav
 				uzlypomocny = uzly;
 				uzlymax = uzly;
 				maxprijatych = uzlypomocny->prijatych;
@@ -815,7 +867,7 @@ int main(int argc, char *argv[]) {
 					
 				uzlypomocny = uzly;
 				
-				
+				//vypisanie ip uzla, ktori prijal najviac paketov
 				while(uzlypomocny != NULL){
 					
 					if(uzlypomocny->prijatych == maximum){
@@ -857,7 +909,7 @@ int main(int argc, char *argv[]) {
 
 		//BOD Cislo 4
 		else if(modvypisu >= 4 && modvypisu <= 9){
-				
+				//v podmienkach je nacitane cislo portu zo suboru, ktoreho vyskyt v .pcap subore filtrujeme
 				//http
 				if(modvypisu == 4){
 					port = cisloportu("http\0",cisla);
@@ -896,6 +948,19 @@ int main(int argc, char *argv[]) {
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
 				
+				//ziskanie informacii o ramcoch potrebne pre spravny vypis
+				//vysvetlenie hondot v pole_komunikacii
+				//hodnota na mieste i udava cislo privatneho portu
+				//hondota na mieste i+1 udava pocet ramcov z danej komunikacie
+				//hodnota na mieste i+3 udava ci je komunikacia ukoncena alebo neukoncena vysvetlenie pre jednotlive stavy ukocena/neukoncena
+				/*	
+				RST 1x  ==> 11
+				FIN + RST ==> 12
+				FIN 2x ==> 2
+			
+				neuplne su 
+				nemaju fin 2x ani rst ==> 0
+				neboli zacate syn ==> -1*/
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
 					type = 0;
@@ -1016,6 +1081,8 @@ int main(int argc, char *argv[]) {
 				nemaju fin 2x ani rst ==> 0
 				neboli zacate syn ==> -1
 			*/
+			
+			
 			/*
 			//vysvetlujuci pomocny vypis			
 			int i ;
@@ -1027,6 +1094,8 @@ int main(int argc, char *argv[]) {
 			}
 
 			*/
+			
+			//zistenie z pola ktora komunikacia je prva neuplna a prva uplna
 			uplna = neuplna = -1;
 			for(i = 0; i < pocet_komunikacii; i++){
 				//ak sa este nenansla prva neuplna
@@ -1046,7 +1115,7 @@ int main(int argc, char *argv[]) {
 			porcisloramca = 0;
 			pcap_close(pcap_subor);	
 			pcap_subor = pcap_open_offline(filepath, chyba_packet_suboru);
-			
+			//vypis uplnej komunikacie
 			if(uplna != -1){
 				pocet_komunikacii = pole_komunikacii[uplna+1];
 				port = pole_komunikacii[uplna];
@@ -1116,7 +1185,7 @@ int main(int argc, char *argv[]) {
 										private_port = zport;
 									
 									vypisanych_komunikacii++;
-								
+									//konkretny vypis potrebnych ramcov z komunikacie
 									if(vypisanych_komunikacii <= 10 || vypisanych_komunikacii > (pocet_komunikacii-10)){
 										fprintf(output,"ramec: %d\n",porcisloramca);
 										fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
@@ -1189,6 +1258,7 @@ int main(int argc, char *argv[]) {
 			pcap_close(pcap_subor);	
 			pcap_subor = pcap_open_offline(filepath, chyba_packet_suboru);
 			fprintf(output,"------------------------------------------------------------------------------\n");
+			//vypis neuplnej komunikacie
 			if(neuplna != -1){
 				pocet_komunikacii = pole_komunikacii[neuplna+1];
 				port = pole_komunikacii[neuplna];
@@ -1258,7 +1328,7 @@ int main(int argc, char *argv[]) {
 										private_port = zport;
 									
 									vypisanych_komunikacii++;
-								
+								//konkretny vypis potrebnych ramcov z komunikacie
 									if(vypisanych_komunikacii <= 10 || vypisanych_komunikacii > (pocet_komunikacii-10)){
 										fprintf(output,"ramec: %d\n",porcisloramca);
 										fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
@@ -1328,7 +1398,7 @@ int main(int argc, char *argv[]) {
 			else fprintf(output,"v subore nie je neuplna komunikacie\n");
 					
 		}
-		//tfpt
+		//tfpt vypis ramcov jednej tftp komunikacie
 		else if(modvypisu == 10){
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
@@ -1911,7 +1981,7 @@ int main(int argc, char *argv[]) {
 					
 			
 		//***********************************************************************************
-		//TFTP v2
+		//TFTP v2 vypis vsetkych komunikacii tfpt
 		else if(modvypisu == 13){
 				
 				int i ;
@@ -1923,6 +1993,10 @@ int main(int argc, char *argv[]) {
 				vypisanych_komunikacii = 0;
 				fprintf(output,"vypis tftp komunikacii\n");
 				porcisloramca = 0;
+				//zistenie pomocnych informacii
+				//pole_komunikacii[i] je cislo portu1
+				//pole_komunikacii[i+1] je cislo portu2
+				//pole_komunikacii[i+2] pocet ramcov danej komunikacie
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
 					type = 0;
 					porcisloramca++;		
@@ -2069,7 +2143,7 @@ int main(int argc, char *argv[]) {
 										cport = hodnota(udp->destport,2);
 										if(zport == pole_komunikacii[i*2] || cport == pole_komunikacii[i*2]){
 											vypisanych_komunikacii++;
-											
+											//vypis konkretnej komunikacie
 											if(vypisanych_komunikacii <= 10 || vypisanych_komunikacii > (pole_komunikacii[i*2+1]-10)){
 												fprintf(output,"ramec: %d\n",porcisloramca);
 												fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
