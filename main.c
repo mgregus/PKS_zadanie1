@@ -223,7 +223,7 @@ void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 					
 }
 
-
+/*
 //interpretuje nazov protokolu/portu z externeho suboru
 char *nazov(int vstup, FILE *subor){
 	rewind(subor);
@@ -254,7 +254,44 @@ char *nazov(int vstup, FILE *subor){
 	if(found == 1)
 		return name;
 	return "dany zaznam nie je v externom subore\0";
+}*/
+
+
+char *nazov(int layer, int code, FILE *subor){
+	rewind(subor);
+	char *name;
+	name = malloc(200*sizeof(char));
+	char *pom;
+	pom = malloc(200*sizeof(char));
+	char c;
+	char found = 0;
+	int vrstva;
+	char novy;
+	int pomcode;    
+	
+	novy = 0; 
+	while((c=getc(subor)) != EOF){
+        if(c >= 48  && c <= 57){
+        	ungetc(c,subor);  
+			fscanf(subor,"%d",&vrstva);
+			fscanf(subor,"%x",&pomcode);
+			if(vrstva == type){
+    				if(pomcode == code){
+						found = 1;
+						fscanf(subor,"%[^\n]s",name);
+						return name;
+				}
+			}
+			
+		}
+	
+	}
+    //odstranenie medzeri
+	if(found == 1)
+		return name;
+	return "dany zaznam nie je v externom subore\0";
 }
+
 
 int cisloportu(char *ret, FILE *subor){
 	int cislo;
@@ -834,32 +871,32 @@ int main(int argc, char *argv[]) {
 				
 				//http
 				if(modvypisu == 4){
-					port = 80;
+					port = cisloportu("http\0",cisla);
 					fprintf(output,"HTTP komunikacie\n");
 				}
 				//https
 				else if(modvypisu == 5){
-					port = 443;
+					port = cisloportu("https\0",cisla);
 					fprintf(output,"HTTPs komunikacie\n");
 				}
 				//telnet
 				else if(modvypisu == 6){
-					port = 23;
+					port = cisloportu("telnet\0",cisla);
 					fprintf(output,"telnet komunikacie\n");
 				}
 				//ssh
 				else if(modvypisu == 7){
-					port = 22;
+					port = cisloportu("ssh\0",cisla);
 					fprintf(output,"SSH komunikacie\n");
 				}
 				//ftp riadiace
 				else if(modvypisu == 8){
-					port = 21;
+					port = cisloportu("ftp-r\0",cisla);
 					fprintf(output,"FTP riadiace komunikacie\n");
 				}
 				//ftp datove
 				else if(modvypisu == 9){
-					port = 20;
+					port = cisloportu("ftp-d\0",cisla);
 					fprintf(output,"FTP datove komunikacie\n");
 				}
 				
@@ -1305,7 +1342,7 @@ int main(int argc, char *argv[]) {
 		else if(modvypisu == 10){
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
-				port = 69;
+				port = cisloportu("tftp\0",cisla);;
 				fprintf(output,"vypis tftp komunikacii\n");
 				porcisloramca = 0;
 				while(pcap_next_ex(pcap_subor,&hlavicka_packetu, &data_packetu) == 1 /*&& /*porcisloramca < 10*/){
@@ -1891,7 +1928,7 @@ int main(int argc, char *argv[]) {
 				for(i = 0; i < 6500; i++){
 					pole_komunikacii[i] = 0;
 				}	
-						
+				port = cisloportu("tftp\0",cisla);		
 				pocet_komunikacii = 0;
 				vypisanych_komunikacii = 0;
 				fprintf(output,"vypis tftp komunikacii\n");
@@ -1946,7 +1983,7 @@ int main(int argc, char *argv[]) {
 								//**************
 									int i;
 									zaznamenane = 0;
-									//ak neexistoval zaznam a ide o prvu komunikaciu na port 69
+									//ak neexistoval zaznam a ide o prvu komunikaciu na port 69 sem sa da dat port
 									if(cport == 69){
 										pole_komunikacii[i*2] = zport;
 										pole_komunikacii[i*2+1] = 1;
