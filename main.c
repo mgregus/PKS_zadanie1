@@ -241,10 +241,12 @@ char *nazov(int layer, int code, FILE *subor){
 	novy = 0; 
 	while((c=getc(subor)) != EOF){
         if(c >= 48  && c <= 57){
-        	ungetc(c,subor);  
+        	ungetc(c,subor); 
+		 
 			fscanf(subor,"%d",&vrstva);
 			fscanf(subor,"%x",&pomcode);
 			fscanf(subor,"%[^\n]s",pom);		
+			
 			if(vrstva == layer){
     				if(pomcode == code){
 						found = 1;
@@ -419,10 +421,14 @@ int main(int argc, char *argv[]) {
 	printf("arp %d\n",cisloportu("arp\0",cisla));
 	*/
 	//nazvy prepinacov zo stvorky
-	int styriicmp = cisloportu("icmp\0",cisla);
 	int styriarp = cisloportu("arp\0",cisla);
 	int styritcp = cisloportu("tcp\0",cisla);
 	int styriudp = cisloportu("udp\0",cisla);
+	int sipv4 = cisloportu("ipv4\0",cisla);
+	int sipv6 = cisloportu("ipv6\0",cisla);
+	int sigmp = cisloportu("igmp\0",cisla);
+	int sicmp = cisloportu("icmp\0",cisla);
+	
 	//***********************************************************************************
 	printf("vypis bodov 1-3 vratane cisla portu a protokolu app. vrstvy zadajte 1-3\n");
 	printf("vypis bodu 4a) HTTP zadajte 4\n");
@@ -535,11 +541,12 @@ int main(int argc, char *argv[]) {
 								fprintf(output," s LLC a SNAP\n");
 								nazovsth = nazov(2,decimalvalue,protokoly);
 								fprintf(output,"SSAP: %s\n",nazovsth);
-								pom = copyuchar((u_char*)data_packetu+20,2);	
+								pom = copyuchar((u_char*)data_packetu+20,2);
 								decimalvalue = hodnota(pom, 2);
 								free(pom);
 								vypisMacadries(ethernet,output);	
 								nazovsth = nazov(2,decimalvalue,protokoly);
+								
 								fprintf(output,"Ether type: %s\n",nazovsth);
 							}//ma llc
 							else{

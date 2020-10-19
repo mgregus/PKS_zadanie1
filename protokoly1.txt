@@ -14,6 +14,10 @@
 
 2 0042 STP
 
+2 2004 Dynamic Trunk protocol
+
+2 010b Spanning tree protocol
+
 2 000AA SNAP(sub-network access protocol)
 
 2 00E0 IPX(Novell netware)
