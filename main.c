@@ -223,38 +223,6 @@ void vypisIpadriesuzlov(UZLY *pt, FILE *output){
 					
 }
 
-/*
-//interpretuje nazov protokolu/portu z externeho suboru
-char *nazov(int vstup, FILE *subor){
-	rewind(subor);
-	char *name;
-	name = malloc(200*sizeof(char));
-	int count = 0; 
-	
-	char c;
-	char found = 0;
-	int hodnotasth;
-    
-	while((c=getc(subor))!= EOF){
-        if(isdigit(c) && c == '0'){
-        	ungetc(c,subor);
-        	getc(subor);
-        	fscanf(subor,"%x",&hodnotasth);
-     		
-			    	
-        	if(hodnotasth == vstup){
-        		fscanf(subor,"%[^\n]s",name);
-        		found = 1; 
-        		break;
-			}
-		}
-    }
-    //odstranenie medzeri
-	name = name + 1;
-	if(found == 1)
-		return name;
-	return "dany zaznam nie je v externom subore\0";
-}*/
 
 
 char *nazov(int layer, int code, FILE *subor){
@@ -268,18 +236,20 @@ char *nazov(int layer, int code, FILE *subor){
 	int vrstva;
 	char novy;
 	int pomcode;    
-	
+/*	if(layer == 3)
+	printf("%d %d\n",layer, code);*/
 	novy = 0; 
 	while((c=getc(subor)) != EOF){
         if(c >= 48  && c <= 57){
         	ungetc(c,subor);  
 			fscanf(subor,"%d",&vrstva);
 			fscanf(subor,"%x",&pomcode);
-			if(vrstva == type){
+			fscanf(subor,"%[^\n]s",pom);		
+			if(vrstva == layer){
     				if(pomcode == code){
 						found = 1;
-						fscanf(subor,"%[^\n]s",name);
-						return name;
+					//	fscanf(subor,"%[^\n]s",name);
+						return pom;
 				}
 			}
 			
@@ -369,7 +339,7 @@ int main(int argc, char *argv[]) {
 	FILE *protokoly;
 	FILE *cisla;
 	FILE *messages;
-	protokoly = fopen("protokoly.txt","r");
+	protokoly = fopen("protokoly1.txt","r");
 	if(protokoly == NULL){
 		printf("neda sa otvorit externy subor protokoly\n");
 		return 2;
@@ -448,8 +418,11 @@ int main(int argc, char *argv[]) {
 	printf("ipv4 %d\n",cisloportu("ipv4\0",cisla));
 	printf("arp %d\n",cisloportu("arp\0",cisla));
 	*/
-	
-	
+	//nazvy prepinacov zo stvorky
+	int styriicmp = cisloportu("icmp\0",cisla);
+	int styriarp = cisloportu("arp\0",cisla);
+	int styritcp = cisloportu("tcp\0",cisla);
+	int styriudp = cisloportu("udp\0",cisla);
 	//***********************************************************************************
 	printf("vypis bodov 1-3 vratane cisla portu a protokolu app. vrstvy zadajte 1-3\n");
 	printf("vypis bodu 4a) HTTP zadajte 4\n");
@@ -546,7 +519,7 @@ int main(int argc, char *argv[]) {
 							
 							fprintf(output,"- Raw\n");
 							vypisMacadries(ethernet,output);
-							nazovsth = nazov(decimalvalue,protokoly);
+							nazovsth = nazov(2,decimalvalue,protokoly);
 							fprintf(output,"%s\n",nazovsth);
 						
 						}//llc/llc+snap
@@ -560,13 +533,13 @@ int main(int argc, char *argv[]) {
 							//ma llc aj snap
 							if(decimalvalue == 170){
 								fprintf(output," s LLC a SNAP\n");
-								nazovsth = nazov(decimalvalue,protokoly);
+								nazovsth = nazov(2,decimalvalue,protokoly);
 								fprintf(output,"SSAP: %s\n",nazovsth);
 								pom = copyuchar((u_char*)data_packetu+20,2);	
 								decimalvalue = hodnota(pom, 2);
 								free(pom);
 								vypisMacadries(ethernet,output);	
-								nazovsth = nazov(decimalvalue,protokoly);
+								nazovsth = nazov(2,decimalvalue,protokoly);
 								fprintf(output,"Ether type: %s\n",nazovsth);
 							}//ma llc
 							else{
@@ -575,7 +548,7 @@ int main(int argc, char *argv[]) {
 								pom = copyuchar((u_char*)data_packetu+15,1);
 								decimalvalue = hodnota(pom, 1);	
 								free(pom);
-								nazovsth = nazov(decimalvalue,protokoly);
+								nazovsth = nazov(2,decimalvalue,protokoly);
 								fprintf(output,"%s\n",nazovsth);
 							}					
 						}
@@ -590,9 +563,8 @@ int main(int argc, char *argv[]) {
 					//vypis vnoreneho protokolu pre ethernet
 					if(type > 0){
 						vypisMacadries(ethernet,output);
-						nazovsth = nazov(type,protokoly);
+						nazovsth = nazov(2,type,protokoly);
 						fprintf(output,"%s\n",nazovsth);
-						//spytat sa na toto????
 						
 						//ipv4
 						if(type == 2048){
@@ -604,7 +576,7 @@ int main(int argc, char *argv[]) {
 							cpchar((u_char*)data_packetu+30,stvorka->destip,4);
 							vypisIpadriesIP(stvorka, output);
 							decimalvalue = hodnota(stvorka->protocol,1);
-							nazovsth = nazov(decimalvalue,protokoly);
+							nazovsth = nazov(3,decimalvalue,protokoly);
 							fprintf(output,"%s\n",nazovsth);
 							
 							
@@ -673,15 +645,25 @@ int main(int argc, char *argv[]) {
 								zport = hodnota(tcp->sourceport,2);
 								cport = hodnota(tcp->destport,2);
 								if(zport < 1024){
-									nazovsth = nazov(zport,protokoly);
+									nazovsth = nazov(4,zport,protokoly);
 									fprintf(output,"%s\n",nazovsth);
 								}
 								else if(cport < 1024){
-									nazovsth = nazov(cport,protokoly);
+									nazovsth = nazov(4,cport,protokoly);
 									fprintf(output,"%s\n",nazovsth);
 								}
 								else{
-									fprintf(output,"port nie je v subore\n");
+									nazovsth = nazov(4,zport,protokoly);
+									
+									if(strstr(nazovsth,"dany zaznam") != NULL)
+										fprintf(output,"%s\n",nazovsth);
+										
+									nazovsth = nazov(4,cport,protokoly);
+									
+									if(strstr(nazovsth,"dany zaznam") != NULL)
+										fprintf(output,"%s\n",nazovsth);
+									else 
+										fprintf(output,"port nie je v subore\n");
 								}
 								
 								
@@ -696,20 +678,20 @@ int main(int argc, char *argv[]) {
 								zport = hodnota(udp->sourceport,2);
 								cport = hodnota(udp->destport,2);
 								if(zport < 1024){
-									nazovsth = nazov(zport,protokoly);
+									nazovsth = nazov(4,zport,protokoly);
 									fprintf(output,"%s\n",nazovsth);
 								}
 								else if(cport < 1024){
-									nazovsth = nazov(cport,protokoly);
+									nazovsth = nazov(4,cport,protokoly);
 									fprintf(output,"%s\n",nazovsth);
 								}
 								else{
-									nazovsth = nazov(zport,protokoly);
+									nazovsth = nazov(4,zport,protokoly);
 									
 									if(strstr(nazovsth,"dany zaznam") != NULL)
 										fprintf(output,"%s\n",nazovsth);
 										
-									nazovsth = nazov(cport,protokoly);
+									nazovsth = nazov(4,cport,protokoly);
 									
 									if(strstr(nazovsth,"dany zaznam") != NULL)
 										fprintf(output,"%s\n",nazovsth);
@@ -742,7 +724,7 @@ int main(int argc, char *argv[]) {
 							cpchar((u_char*)data_packetu+38,sestka->destip,16);
 							vypisIpadriesIPv6(sestka, output);
 							decimalvalue = hodnota(sestka->protocol,1);
-							nazovsth = nazov(decimalvalue,protokoly);
+							nazovsth = nazov(3,decimalvalue,protokoly);
 							fprintf(output,"%s\n",nazovsth);							
 						}						
 						
@@ -950,7 +932,7 @@ int main(int argc, char *argv[]) {
 							decimalvalue = hodnota(stvorka->protocol,1);
 		
 										
-							if(decimalvalue == 6){
+							if(decimalvalue == styritcp){
 								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
 								cpchar((u_char*)data_packetu+14+IHL+13,tcp->flag,1);
@@ -1110,7 +1092,7 @@ int main(int argc, char *argv[]) {
 							decimalvalue = hodnota(stvorka->protocol,1);
 		
 										
-							if(decimalvalue == 6){
+							if(decimalvalue == styritcp){
 								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
 								cpchar((u_char*)data_packetu+14+IHL+13,tcp->flag,1);
@@ -1135,29 +1117,30 @@ int main(int argc, char *argv[]) {
 										fprintf(output,"Ethernet II\n");
 										vypisMacadries(ethernet,output);
 										type = hodnota(ethernet->type,2);
-										nazovsth = nazov(type,protokoly);
+										nazovsth = nazov(2,type,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 										vypisIpadriesIP(stvorka, output);
 										decimalvalue = hodnota(stvorka->protocol,1);
-										nazovsth = nazov(decimalvalue,protokoly);
+										nazovsth = nazov(3,decimalvalue,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 					
 										
 										
 										if(zport < 1024){
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
+										
 										else if(cport < 1024){
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
 										else{
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											else 
@@ -1251,7 +1234,7 @@ int main(int argc, char *argv[]) {
 							decimalvalue = hodnota(stvorka->protocol,1);
 		
 										
-							if(decimalvalue == 6){
+							if(decimalvalue == styritcp){
 								cpchar((u_char*)data_packetu+14+IHL,tcp->sourceport,2);
 								cpchar((u_char*)data_packetu+14+IHL+2,tcp->destport,2);
 								cpchar((u_char*)data_packetu+14+IHL+13,tcp->flag,1);
@@ -1276,29 +1259,29 @@ int main(int argc, char *argv[]) {
 										fprintf(output,"Ethernet II\n");
 										vypisMacadries(ethernet,output);
 										type = hodnota(ethernet->type,2);
-										nazovsth = nazov(type,protokoly);
+										nazovsth = nazov(2,type,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 										vypisIpadriesIP(stvorka, output);
 										decimalvalue = hodnota(stvorka->protocol,1);
-										nazovsth = nazov(decimalvalue,protokoly);
+										nazovsth = nazov(3,decimalvalue,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 					
 										
 										
 										if(zport < 1024){
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
 										else if(cport < 1024){
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
 										else{
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											else 
@@ -1482,29 +1465,29 @@ int main(int argc, char *argv[]) {
 										fprintf(output,"Ethernet II\n");
 										vypisMacadries(ethernet,output);
 										type = hodnota(ethernet->type,2);
-										nazovsth = nazov(type,protokoly);
+										nazovsth = nazov(2,type,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 										vypisIpadriesIP(stvorka, output);
 										decimalvalue = hodnota(stvorka->protocol,1);
-										nazovsth = nazov(decimalvalue,protokoly);
+										nazovsth = nazov(3,decimalvalue,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 					
 										
 										
 										if(zport < 1024){
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
 										else if(cport < 1024){
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											fprintf(output,"%s\n",nazovsth);
 										}
 										else{
-											nazovsth = nazov(zport,protokoly);
+											nazovsth = nazov(4,zport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											
-											nazovsth = nazov(cport,protokoly);
+											nazovsth = nazov(4,cport,protokoly);
 											if(strstr(nazovsth,"dany zaznam") != NULL)
 												fprintf(output,"%s\n",nazovsth);
 											else 
@@ -1664,11 +1647,11 @@ int main(int argc, char *argv[]) {
 										fprintf(output,"Ethernet II\n");
 										vypisMacadries(ethernet,output);
 										type = hodnota(ethernet->type,2);
-										nazovsth = nazov(type,protokoly);
+										nazovsth = nazov(2,type,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 										vypisIpadriesIP(stvorka, output);
 										decimalvalue = hodnota(stvorka->protocol,1);
-										nazovsth = nazov(decimalvalue,protokoly);
+										nazovsth = nazov(3,decimalvalue,protokoly);
 										fprintf(output,"%s\n",nazovsth);
 					
 										//vypis type a code
@@ -1734,7 +1717,7 @@ int main(int argc, char *argv[]) {
 					
 						
 						//arp
-						if(type == 2054){
+						if(type == styriarp){
 							
 							//aj tu prerobene
 							cpchar((u_char*)data_packetu+20,arp->operation,2);
@@ -1822,7 +1805,7 @@ int main(int argc, char *argv[]) {
 					
 						
 						//arp
-						if(type == 2054){
+						if(type == styriarp){
 							
 							//aj tu prerobene
 							cpchar((u_char*)data_packetu+20,arp->operation,2);
@@ -1869,7 +1852,7 @@ int main(int argc, char *argv[]) {
 								fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
 								fprintf(output,"Ethernet II\n");
 								type = hodnota(ethernet->type,2);
-								nazovsth = nazov(type,protokoly);
+								nazovsth = nazov(2,type,protokoly);
 								fprintf(output,"%s\n",nazovsth);
 								vypisMacadries(ethernet,output);
 								int it = 0;
@@ -1891,7 +1874,7 @@ int main(int argc, char *argv[]) {
 								fprintf(output,"dlzka prenasana po mediu - %d B\n",dlzka_paketu_po_mediu(hlavicka_packetu->caplen));
 								fprintf(output,"Ethernet II\n");
 								type = hodnota(ethernet->type,2);
-								nazovsth = nazov(type,protokoly);
+								nazovsth = nazov(2,type,protokoly);
 								fprintf(output,"%s\n",nazovsth);
 								vypisMacadries(ethernet,output);
 								int it = 0;
@@ -2087,29 +2070,29 @@ int main(int argc, char *argv[]) {
 												fprintf(output,"Ethernet II\n");
 												vypisMacadries(ethernet,output);
 												type = hodnota(ethernet->type,2);
-												nazovsth = nazov(type,protokoly);
+												nazovsth = nazov(2,type,protokoly);
 												fprintf(output,"%s\n",nazovsth);
 												vypisIpadriesIP(stvorka, output);
 												decimalvalue = hodnota(stvorka->protocol,1);
-												nazovsth = nazov(decimalvalue,protokoly);
+												nazovsth = nazov(3,decimalvalue,protokoly);
 												fprintf(output,"%s\n",nazovsth);
 							
 												
 												
 												if(zport < 1024){
-													nazovsth = nazov(zport,protokoly);
+													nazovsth = nazov(4,zport,protokoly);
 													fprintf(output,"%s\n",nazovsth);
 												}
 												else if(cport < 1024){
-													nazovsth = nazov(cport,protokoly);
+													nazovsth = nazov(4,cport,protokoly);
 													fprintf(output,"%s\n",nazovsth);
 												}
 												else{
-													nazovsth = nazov(zport,protokoly);
+													nazovsth = nazov(4,zport,protokoly);
 													if(strstr(nazovsth,"dany zaznam") != NULL)
 														fprintf(output,"%s\n",nazovsth);
 													
-													nazovsth = nazov(cport,protokoly);
+													nazovsth = nazov(4,cport,protokoly);
 													if(strstr(nazovsth,"dany zaznam") != NULL)
 														fprintf(output,"%s\n",nazovsth);
 													else 

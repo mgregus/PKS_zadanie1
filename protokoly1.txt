@@ -1,0 +1,99 @@
+2 0806 ARP
+
+2 0800 IPv4
+
+2 86dd IPv6
+
+2 880B PPP
+
+2 809B Appletalk
+
+2 80F3 appletalk aarp
+
+2 0201 PUP addr trans
+
+2 0042 STP
+
+2 000AA SNAP(sub-network access protocol)
+
+2 00E0 IPX(Novell netware)
+
+2 00FF IPX header
+
+2 00FE ISO network layer protocols
+
+2 00F4 Lan management
+
+2 0002 LLC sublayer manag. /individual
+
+2 0003 LLC sublayer manag. /group
+
+2 005E ISI ip
+
+2 0006 IP DoD 
+
+2 007E X.25 PLP
+
+2 0042 BPDU
+
+2 00E0 Proway
+
+3 0001 1 ICMP
+
+3 003A ICMPv6
+
+3 0002 2 IGMP
+
+3 0006 6 TCP
+
+3 0011 17 UDP
+
+4 0007 7 echo
+
+4 0014 20 ftp-data
+
+4 0015 21 ftp-control
+
+4 0016 22 SSH
+
+4 0017 23 telnet
+
+4 0019 25 SMPT
+
+4 0035 53 DNS
+
+4 0050 80 HTTP
+
+4 01BB 443 HTTPS
+
+4 006E 110 pop3
+
+4 008F 143 IMAP
+
+4 01BD 445 microsoft-ds
+
+4 0438 1080 microsoft socks
+
+4 0025 37 time
+
+4 00A1 161 snmp
+
+4 00A2 162 snmp-trap
+
+4 0089 137 netbios-ns
+
+4 008A 138 netbios-dgm
+
+4 008B 139 netbions-ssn
+
+4 0043 67 DHCP client
+
+4 0044 68 DHCP server
+
+4 0045 69 TFTP
+
+4 0208 520 RIR
+
+4 0202 514 syslog
+
+4 51A07 33434 Traceroute

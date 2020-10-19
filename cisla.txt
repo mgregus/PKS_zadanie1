@@ -1,0 +1,14 @@
+http 80
+https 443
+telnet 23
+ssh 22
+ftp-r 21
+ftp-d 20
+tftp 69
+icmp 1
+igmp 2
+tcp 6
+udp 17
+ipv4 2048
+ipv6 34525
+arp 2054
