@@ -256,6 +256,21 @@ char *nazov(int vstup, FILE *subor){
 	return "dany zaznam nie je v externom subore\0";
 }
 
+int cisloportu(char *ret, FILE *subor){
+	int cislo;
+	rewind(subor);
+	char *name;
+	name = malloc(200*sizeof(char));
+
+	while(fscanf(subor,"%s",name) != EOF){
+		if(strcmp(ret, name) == 0){
+			fscanf(subor,"%d",&cislo);
+			return cislo;
+		}
+	}
+	
+	return -1;
+}
 
 char *nazovicmp(int type, int code, FILE *subor){
 	rewind(subor);
@@ -315,14 +330,20 @@ int main(int argc, char *argv[]) {
 	//pomocne .txt subory
 	FILE *output;
 	FILE *protokoly;
+	FILE *cisla;
 	FILE *messages;
 	protokoly = fopen("protokoly.txt","r");
 	if(protokoly == NULL){
 		printf("neda sa otvorit externy subor protokoly\n");
 		return 2;
 	}
+	cisla = fopen("cisla.txt","r");
+	if(cisla == NULL){
+		printf("neda sa otvorit externy subor cisla\n");
+		return 2;
+	}
 	messages = fopen("messages.txt","r");
-	if(protokoly == NULL){
+	if(messages == NULL){
 		printf("neda sa otvorit externy subor messages\n");
 		return 2;
 	}
@@ -377,6 +398,20 @@ int main(int argc, char *argv[]) {
 	UDP *udp = malloc(sizeof(UDP));
 	TCP *tcp = malloc(sizeof(TCP));
 	ICMP *icmp = malloc(sizeof(ICMP));
+	
+	/*
+	//testovacivypis
+	printf("http %d\n",cisloportu("http\0",cisla));
+	printf("tftp %d\n",cisloportu("tftp\0",cisla));
+	printf("ssh %d\n",cisloportu("ssh\0",cisla));
+	printf("icmp %d\n",cisloportu("icmp\0",cisla));
+	printf("telnet %d\n",cisloportu("telnet\0",cisla));
+	printf("ftp-d %d\n",cisloportu("ftp-d\0",cisla));
+	printf("ftp-r %d\n",cisloportu("ftp-r\0",cisla));
+	printf("ipv4 %d\n",cisloportu("ipv4\0",cisla));
+	printf("arp %d\n",cisloportu("arp\0",cisla));
+	*/
+	
 	
 	//***********************************************************************************
 	printf("vypis bodov 1-3 vratane cisla portu a protokolu app. vrstvy zadajte 1-3\n");
