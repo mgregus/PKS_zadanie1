@@ -1926,7 +1926,7 @@ int main(int argc, char *argv[]) {
 							fprintf(output,"komunikacia cislo: %d\n",vypisanych_komunikacii);
 							if(operation == 1){
 								fprintf(output,"ARP request, ");
-								fprintf(output,"IP adresa: %d.%d.%d.%d, MAC adresa: ?????\n",arp->senderip[0],arp->senderip[1],arp->senderip[2],arp->senderip[3]);
+								fprintf(output,"IP adresa: %d.%d.%d.%d, MAC adresa: ?????\n",arp->targetip[0],arp->targetip[1],arp->targetip[2],arp->targetip[3]);
 								vypisIpadriesARP(arp, output);
 								fprintf(output,"ramec: %d\n",porcisloramca);	
 								fprintf(output,"dlzka poskytnuta pcap API - %d B\n",hlavicka_packetu->caplen);
