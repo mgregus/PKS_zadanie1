@@ -482,7 +482,8 @@ int main(int argc, char *argv[]) {
 	printf("vypis bodu 4g) TFTP zadajte 10\n");
 	printf("vypis bodu 4h) ICMP zadajte 11\n");
 	printf("vypis bodu 4i) ARP zadajte 12\n");
-	printf("vypis bodu 4i) TFTP po jednotlivych komunikaciach zadajte 13\n\n");
+	printf("vypis bodu 4i) TFTP po jednotlivych komunikaciach zadajte 13\n");
+	printf("vypis doimplementacia 14\n\n");
 	//***********************************************************************************
 	
 	
@@ -2211,7 +2212,11 @@ int main(int argc, char *argv[]) {
 			
 		
 		}
-					
+		
+		//doimplementacia
+		else if(modvypisu == 14){
+			
+		}			
 	
 		//***********************************************************************************
 			
