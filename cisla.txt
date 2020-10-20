@@ -2,6 +2,7 @@ http 80
 https 443
 telnet 23
 ssh 22
+dns 53
 ftp-r 21
 ftp-d 20
 tftp 69
