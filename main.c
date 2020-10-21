@@ -2049,12 +2049,12 @@ int main(int argc, char *argv[]) {
 								zport = hodnota(udp->sourceport,2);
 								cport = hodnota(udp->destport,2);
 								//**************
-									int i;
+								
 									zaznamenane = 0;
 									//ak neexistoval zaznam a ide o prvu komunikaciu na port 69 sem sa da dat port
 									if(cport == 69){
-										pole_komunikacii[i*2] = zport;
-										pole_komunikacii[i*2+1] = 1;
+										pole_komunikacii[2*pocet_komunikacii] = zport;
+										pole_komunikacii[2*pocet_komunikacii+1] = 1;
 										pocet_komunikacii++;
 										zaznamenane == 1;
 									}
@@ -2062,8 +2062,8 @@ int main(int argc, char *argv[]) {
 									else{
 										for(i = 0; i < pocet_komunikacii; i++){
 											//ak sa nasiel zaznam tak pridame pocet komunikacii
-											if(pole_komunikacii[i*2] == cport || pole_komunikacii[i*2] == zport){
-												pole_komunikacii[i*2+1]++;
+											if(pole_komunikacii[2*i] == cport || pole_komunikacii[i*2] == zport){
+												pole_komunikacii[2*i+1] += 1;
 											}
 										}
 									}
@@ -2081,8 +2081,7 @@ int main(int argc, char *argv[]) {
 				}
 				//prechod a vypis tftp ramcov
 				//printf("tftpcok pre port: %d %d %d\n",pocet_komunikacii,port,porcisloramca);
-				
-				
+			
 				//vypis vsetkych komunikacii tfpt podla bodu 4
 				
 				for(i = 0; i < pocet_komunikacii; i++){
