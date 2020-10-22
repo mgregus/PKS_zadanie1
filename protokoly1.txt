@@ -6,6 +6,8 @@
 
 2 880B PPP
 
+2 9000 Configuration test protocol
+
 2 809B Appletalk
 
 2 80F3 appletalk aarp
@@ -49,6 +51,8 @@
 3 0002 2 IGMP
 
 3 0006 6 TCP
+
+3 0067 PIM
 
 3 0011 17 UDP
 
